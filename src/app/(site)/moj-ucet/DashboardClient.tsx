@@ -6,6 +6,7 @@ import {
   useCallback,
   useMemo,
   useReducer,
+  useRef,
   type KeyboardEvent,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -30,12 +31,21 @@ import {
 import {
   PlusIcon,
   EyeIcon,
+  EyeOffIcon,
   MessageIcon,
   ClockIcon,
   HeartIcon,
   CarIcon,
   XIcon,
 } from "@/components/ui/Icons";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/shadcn/dialog";
 import TurnstileCaptcha from "@/components/security/TurnstileCaptcha";
 import {
   AdsIcon,
@@ -609,29 +619,37 @@ function useDashboardClientView({
   return (
     <main className="market-page pb-16 pt-6">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <DashboardHeader
-          avatarUrl={avatarUrl ?? undefined}
-          avatarErrorUrl={avatarErrorUrl}
-          onAvatarError={setAvatarErrorUrl}
-          avatarAlt={profile?.full_name || user.email || t("user")}
-          userInitial={userInitial}
-          dealerMeta={dealerMeta}
-          myAccountKicker={inlineCopy.myAccountKicker}
-          dashboardHeading={t("dashboardHeading")}
-          dealerDashboardAvailableLabel={t("dealerDashboardAvailable")}
-          dealerDashboardLabel={t("dealerDashboard")}
-          addListingLabel={tCommon("addListing")}
-        />
+        <div className={activeTab === "settings" ? "mx-auto max-w-5xl" : undefined}>
+          <DashboardHeader
+            avatarUrl={avatarUrl ?? undefined}
+            avatarErrorUrl={avatarErrorUrl}
+            onAvatarError={setAvatarErrorUrl}
+            avatarAlt={profile?.full_name || user.email || t("user")}
+            userInitial={userInitial}
+            dealerMeta={dealerMeta}
+            myAccountKicker={inlineCopy.myAccountKicker}
+            dashboardHeading={t("dashboardHeading")}
+            dealerDashboardAvailableLabel={t("dealerDashboardAvailable")}
+            dealerDashboardLabel={t("dealerDashboard")}
+          />
 
-        <DashboardTabNav
-          activeTab={activeTab}
-          pricingSummary={pricingSummary}
-          freeListingBanner={inlineCopy.freeListingBanner}
-          onTabChange={handleTabChange}
-          getLabel={(labelKey) => t(labelKey) || labelKey}
-        />
+          <DashboardTabNav
+            activeTab={activeTab}
+            pricingSummary={pricingSummary}
+            freeListingBanner={inlineCopy.freeListingBanner}
+            onTabChange={handleTabChange}
+            getLabel={(labelKey) => t(labelKey) || labelKey}
+            navigationLabel={t("accountNavigation")}
+          />
+        </div>
 
-        <section className={activeTab === "create" ? "" : "min-w-0"}>
+        <section
+          id="dashboard-active-panel"
+          role="tabpanel"
+          aria-labelledby={`dashboard-tab-${activeTab}`}
+          tabIndex={0}
+          className={activeTab === "create" ? "outline-none" : "min-w-0 outline-none"}
+        >
           {activeTab === "ads" && (
             <MyAdsTab
               ads={adsState.userAds}
@@ -669,7 +687,6 @@ function DashboardHeader({
   dashboardHeading,
   dealerDashboardAvailableLabel,
   dealerDashboardLabel,
-  addListingLabel,
 }: {
   avatarUrl?: string;
   avatarErrorUrl: string | null;
@@ -681,12 +698,11 @@ function DashboardHeader({
   dashboardHeading: string;
   dealerDashboardAvailableLabel: string;
   dealerDashboardLabel: string;
-  addListingLabel: string;
 }) {
   return (
-    <div className="market-panel mb-4 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-      <div className="flex items-center gap-4">
-        <div className="relative flex size-14 items-center justify-center overflow-hidden rounded-xl border border-primary/12 bg-primary/5 text-xl font-bold text-primary sm:size-16">
+    <div className="market-panel mb-4 flex items-center justify-between gap-3 p-4 sm:p-5">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+        <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/12 bg-primary/5 text-xl font-bold text-primary sm:size-16">
           {avatarUrl && avatarErrorUrl !== avatarUrl ? (
             <Image
               src={avatarUrl}
@@ -700,9 +716,9 @@ function DashboardHeader({
             userInitial
           )}
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="market-kicker">{myAccountKicker}</p>
-          <h1 className="mt-1 !text-3xl font-display font-semibold text-text-primary sm:!text-4xl">
+          <h1 className="mt-1 !text-2xl font-display font-semibold text-text-primary sm:!text-4xl">
             {dashboardHeading}
           </h1>
           {dealerMeta.hasDealer ? (
@@ -714,23 +730,16 @@ function DashboardHeader({
           ) : null}
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        {dealerMeta.hasDealer ? (
+      {dealerMeta.hasDealer ? (
+        <div className="hidden shrink-0 sm:block">
           <Link
             href="/dealer"
             className="market-action-secondary inline-flex items-center gap-2 px-5 py-3 text-sm"
           >
             {dealerDashboardLabel}
           </Link>
-        ) : null}
-        <Link
-          href={CREATE_LISTING_ROUTE}
-          className="market-action-primary hidden items-center gap-2 px-6 py-3 text-sm sm:inline-flex"
-        >
-          <PlusIcon className="size-5" />
-          {addListingLabel}
-        </Link>
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -741,26 +750,79 @@ function DashboardTabNav({
   freeListingBanner,
   onTabChange,
   getLabel,
+  navigationLabel,
 }: {
   activeTab: string;
   pricingSummary: { premium: string; top: string };
   freeListingBanner: string;
   onTabChange: (tabId: string) => void;
   getLabel: (labelKey: (typeof TABS_CONFIG)[number]["labelKey"]) => string;
+  navigationLabel: string;
 }) {
+  const mobileTabListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const list = mobileTabListRef.current;
+    const activeButton = list?.querySelector<HTMLElement>(`[data-tab-id="${activeTab}"]`);
+    if (!list || !activeButton || !window.matchMedia("(max-width: 639px)").matches) {
+      return;
+    }
+
+    const centeredLeft = activeButton.offsetLeft - (list.clientWidth - activeButton.offsetWidth) / 2;
+    list.scrollTo({ left: Math.max(0, centeredLeft), behavior: "auto" });
+  }, [activeTab]);
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number | null = null;
+
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      nextIndex = (index + 1) % TABS_CONFIG.length;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      nextIndex = (index - 1 + TABS_CONFIG.length) % TABS_CONFIG.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = TABS_CONFIG.length - 1;
+    }
+
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    const nextTab = TABS_CONFIG[nextIndex];
+    onTabChange(nextTab.id);
+    mobileTabListRef.current
+      ?.querySelector<HTMLButtonElement>(`[data-tab-id="${nextTab.id}"]`)
+      ?.focus();
+  };
+
   return (
     <div className="market-panel mb-5 p-2">
-      <div className="mb-2 rounded-xl border border-accent/15 bg-accent/5 px-4 py-3 text-sm text-primary sm:hidden">
-        {freeListingBanner
-          .replace("{premium}", pricingSummary.premium)
-          .replace("{top}", pricingSummary.top)}
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
-        {TABS_CONFIG.map((tab) => (
+      {activeTab === "ads" || activeTab === "create" ? (
+        <div className="mb-2 rounded-xl border border-accent/15 bg-accent/5 px-4 py-3 text-sm text-primary sm:hidden">
+          {freeListingBanner
+            .replace("{premium}", pricingSummary.premium)
+            .replace("{top}", pricingSummary.top)}
+        </div>
+      ) : null}
+      <div
+        ref={mobileTabListRef}
+        role="tablist"
+        aria-label={navigationLabel}
+        className="no-scrollbar flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0"
+      >
+        {TABS_CONFIG.map((tab, index) => (
           <button
             key={tab.id}
+            id={`dashboard-tab-${tab.id}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls="dashboard-active-panel"
+            tabIndex={activeTab === tab.id ? 0 : -1}
+            data-tab-id={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold whitespace-nowrap transition-all sm:justify-start ${
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
+            className={`flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold whitespace-nowrap transition-all sm:justify-start ${
               activeTab === tab.id
                 ? "border-transparent bg-primary text-white shadow-sm"
                 : "border-border bg-background text-primary hover:bg-background-muted"
@@ -2565,6 +2627,7 @@ type SettingsStatusMessage = {
 
 type SettingsTabState = {
   phone: string;
+  savedPhone: string;
   isSaving: boolean;
   saveMessage: SettingsStatusMessage | null;
   newPassword: string;
@@ -2578,6 +2641,7 @@ type SettingsTabState = {
 
 type SettingsTabAction =
   | { type: "setPhone"; value: string }
+  | { type: "setSavedPhone"; value: string }
   | { type: "setIsSaving"; value: boolean }
   | { type: "setSaveMessage"; value: SettingsStatusMessage | null }
   | { type: "setNewPassword"; value: string }
@@ -2628,6 +2692,8 @@ function settingsTabReducer(
   switch (action.type) {
     case "setPhone":
       return { ...state, phone: action.value };
+    case "setSavedPhone":
+      return { ...state, savedPhone: action.value };
     case "setIsSaving":
       return { ...state, isSaving: action.value };
     case "setSaveMessage":
@@ -2654,6 +2720,7 @@ function settingsTabReducer(
 function createInitialSettingsTabState(profile: SettingsProfile): SettingsTabState {
   return {
     phone: profile?.phone || "",
+    savedPhone: profile?.phone || "",
     isSaving: false,
     saveMessage: null,
     newPassword: "",
@@ -2669,14 +2736,19 @@ function createInitialSettingsTabState(profile: SettingsProfile): SettingsTabSta
 function SettingsStatusAlert({
   message,
   className = "",
+  id,
 }: {
   message: SettingsStatusMessage | null;
   className?: string;
+  id?: string;
 }) {
   if (!message) return null;
 
   return (
     <div
+      id={id}
+      role={message.type === "error" ? "alert" : "status"}
+      aria-live={message.type === "error" ? "assertive" : "polite"}
       className={`${className} px-4 py-2 rounded-lg text-sm font-medium ${
         message.type === "success"
           ? "bg-success/10 text-success"
@@ -2688,57 +2760,73 @@ function SettingsStatusAlert({
   );
 }
 
-function SettingsAccountInfoSection({ profile }: { profile: SettingsProfile }) {
-  const t = useTranslations("dashboard");
-
-  return (
-    <div className="market-card bg-surface/50 p-6">
-      <h2 className="text-lg font-semibold text-primary mb-4">{t("accountInfo")}</h2>
-      <div className="space-y-3">
-        <div className="flex justify-between items-center py-2 border-b border-border">
-          <span className="text-secondary">{t("name")}</span>
-          <span className="font-medium text-primary">
-            {profile?.full_name || t("notProvided")}
-          </span>
-        </div>
-        <p className="text-xs text-tertiary">{t("contactAdminToChangeName")}</p>
-      </div>
-    </div>
-  );
-}
-
-function SettingsContactInfoSection({
+function SettingsPersonalDetailsSection({
+  profile,
+  email,
   phone,
   onPhoneChange,
   onPhoneBlur,
   saveMessage,
   onSave,
   isSaving,
+  isPhoneDirty,
 }: {
+  profile: SettingsProfile;
+  email?: string | null;
   phone: string;
   onPhoneChange: (value: string) => void;
   onPhoneBlur: () => void;
   saveMessage: SettingsStatusMessage | null;
   onSave: () => void;
   isSaving: boolean;
+  isPhoneDirty: boolean;
 }) {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const phonePlaceholder = useMarket().phonePlaceholder;
 
   return (
-    <div className="market-card p-6">
-      <h2 className="text-lg font-semibold text-primary mb-4">{t("contactInfo")}</h2>
+    <section
+      aria-labelledby="dashboard-personal-details-heading"
+      className="market-card market-card-static p-5 sm:p-6"
+    >
+      <h2
+        id="dashboard-personal-details-heading"
+        className="mb-4 text-lg font-semibold text-text-primary"
+      >
+        {t("personalDetails")}
+      </h2>
+      <dl className="divide-y divide-border border-y border-border">
+        <div className="flex items-start justify-between gap-4 py-3">
+          <dt className="text-sm text-secondary">{t("name")}</dt>
+          <dd className="text-right text-sm font-medium text-text-primary">
+            {profile?.full_name || t("notProvided")}
+          </dd>
+        </div>
+        <div className="flex items-start justify-between gap-4 py-3">
+          <dt className="text-sm text-secondary">{t("emailAddress")}</dt>
+          <dd className="break-all text-right text-sm font-medium text-text-primary">
+            {email || t("notProvided")}
+          </dd>
+        </div>
+      </dl>
+      <p className="mt-3 text-sm leading-5 text-secondary">
+        {t("contactAdminToChangeName")}{" "}
+        <Link href="/kontakt" className="font-semibold text-primary underline-offset-2 hover:underline">
+          {t("contactSupport")}
+        </Link>
+      </p>
       <form
-        className="space-y-4"
+        className="mt-6 space-y-4 border-t border-border pt-5"
         action={() => {
           onSave();
         }}
       >
+        <h3 className="text-base font-semibold text-text-primary">{t("contactInfo")}</h3>
         <div>
           <label
             htmlFor="dashboard-settings-phone"
-            className="block text-sm font-medium text-primary mb-2"
+            className="mb-2 block text-sm font-medium text-text-primary"
           >
             {t("phoneNumber")}
           </label>
@@ -2752,21 +2840,25 @@ function SettingsContactInfoSection({
             placeholder={phonePlaceholder}
             className="input"
             autoComplete="tel"
+            inputMode="tel"
+            aria-describedby="dashboard-settings-phone-help"
           />
-          <p className="text-xs text-tertiary mt-1">{t("phoneVisibility")}</p>
+          <p id="dashboard-settings-phone-help" className="mt-1.5 text-sm leading-5 text-secondary">
+            {t("phoneVisibility")}
+          </p>
         </div>
 
-        <SettingsStatusAlert message={saveMessage} />
+        <SettingsStatusAlert id="dashboard-settings-phone-status" message={saveMessage} />
 
         <button
           type="submit"
-          disabled={isSaving}
-          className="market-action-primary px-6 py-2.5 disabled:opacity-50"
+          disabled={isSaving || !isPhoneDirty}
+          className="market-action-account px-6 py-2.5 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-secondary disabled:opacity-100"
         >
           {isSaving ? tCommon("loading") : t("saveChanges")}
         </button>
       </form>
-    </div>
+    </section>
   );
 }
 
@@ -2791,11 +2883,20 @@ function SettingsSecuritySection({
 }) {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isSubmitDisabled = isUpdatingPassword || !isPasswordFormValid;
+  const hasConfirmation = confirmPassword.length > 0;
+  const passwordsMatch = hasConfirmation && newPassword === confirmPassword;
 
   return (
-    <div className="market-card bg-surface/50 p-6">
-      <h2 className="text-lg font-semibold text-primary mb-4">{t("security")}</h2>
+    <section
+      aria-labelledby="dashboard-security-heading"
+      className="market-card market-card-static p-5 sm:p-6"
+    >
+      <h2 id="dashboard-security-heading" className="mb-4 text-lg font-semibold text-text-primary">
+        {t("security")}
+      </h2>
       <form
         className="space-y-4"
         action={() => {
@@ -2805,136 +2906,357 @@ function SettingsSecuritySection({
         <div>
           <label
             htmlFor="dashboard-settings-new-password"
-            className="block text-sm font-medium text-primary mb-2"
+            className="mb-2 block text-sm font-medium text-text-primary"
           >
             {t("newPassword")}
           </label>
-          <input
-            id="dashboard-settings-new-password"
-            name="newPassword"
-            type="password"
-            value={newPassword}
-            onChange={(e) => onNewPasswordChange(e.target.value)}
-            className="input"
-            autoComplete="new-password"
-            minLength={MIN_PASSWORD_LENGTH}
-            required
-          />
-          <p className="text-xs text-tertiary mt-1">
+          <div className="relative">
+            <input
+              id="dashboard-settings-new-password"
+              name="newPassword"
+              type={showNewPassword ? "text" : "password"}
+              value={newPassword}
+              onChange={(e) => onNewPasswordChange(e.target.value)}
+              className="input pr-12"
+              autoComplete="new-password"
+              minLength={MIN_PASSWORD_LENGTH}
+              required
+              aria-describedby="dashboard-settings-password-length"
+            />
+            <button
+              type="button"
+              aria-label={showNewPassword ? t("hidePassword") : t("showPassword")}
+              aria-pressed={showNewPassword}
+              onClick={() => setShowNewPassword((visible) => !visible)}
+              className="absolute right-1 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-lg text-tertiary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+            >
+              {showNewPassword ? (
+                <EyeOffIcon className="size-5" />
+              ) : (
+                <EyeIcon className="size-5" />
+              )}
+            </button>
+          </div>
+          <p
+            id="dashboard-settings-password-length"
+            className={`mt-1.5 text-sm leading-5 ${
+              newPassword.length >= MIN_PASSWORD_LENGTH ? "text-success" : "text-tertiary"
+            }`}
+          >
             {t("passwordMinLength", { min: MIN_PASSWORD_LENGTH })}
           </p>
         </div>
         <div>
           <label
             htmlFor="dashboard-settings-confirm-password"
-            className="block text-sm font-medium text-primary mb-2"
+            className="mb-2 block text-sm font-medium text-text-primary"
           >
             {t("confirmPassword")}
           </label>
-          <input
-            id="dashboard-settings-confirm-password"
-            name="confirmPassword"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => onConfirmPasswordChange(e.target.value)}
-            className="input"
-            autoComplete="new-password"
-            minLength={MIN_PASSWORD_LENGTH}
-            required
-          />
+          <div className="relative">
+            <input
+              id="dashboard-settings-confirm-password"
+              name="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => onConfirmPasswordChange(e.target.value)}
+              className="input pr-12"
+              autoComplete="new-password"
+              minLength={MIN_PASSWORD_LENGTH}
+              required
+              aria-invalid={hasConfirmation && !passwordsMatch}
+              aria-describedby="dashboard-settings-password-match"
+            />
+            <button
+              type="button"
+              aria-label={showConfirmPassword ? t("hidePassword") : t("showPassword")}
+              aria-pressed={showConfirmPassword}
+              onClick={() => setShowConfirmPassword((visible) => !visible)}
+              className="absolute right-1 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-lg text-tertiary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+            >
+              {showConfirmPassword ? (
+                <EyeOffIcon className="size-5" />
+              ) : (
+                <EyeIcon className="size-5" />
+              )}
+            </button>
+          </div>
+          <p
+            id="dashboard-settings-password-match"
+            aria-live="polite"
+            className={`mt-1.5 text-sm leading-5 ${
+              hasConfirmation ? (passwordsMatch ? "text-success" : "text-error") : "text-tertiary"
+            }`}
+          >
+            {hasConfirmation
+              ? passwordsMatch
+                ? t("passwordsMatch")
+                : t("passwordMismatch")
+              : t("passwordMatchHint")}
+          </p>
         </div>
-        <p className="text-xs text-tertiary -mt-1">{t("passwordDirectSetHint")}</p>
+        <p className="-mt-1 text-sm leading-5 text-secondary">{t("passwordDirectSetHint")}</p>
 
-        <SettingsStatusAlert message={passwordMessage} />
+        <SettingsStatusAlert id="dashboard-settings-password-status" message={passwordMessage} />
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
             disabled={isSubmitDisabled}
-            className="market-action-primary px-6 py-2.5 disabled:opacity-50"
+            className="market-action-account px-6 py-2.5 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-secondary disabled:opacity-100"
           >
             {isUpdatingPassword ? tCommon("loading") : t("changePassword")}
           </button>
         </div>
       </form>
-    </div>
+
+    </section>
+  );
+}
+
+function SettingsSessionsSection({ onSignOut }: { onSignOut: () => Promise<void> }) {
+  const t = useTranslations("dashboard");
+
+  return (
+    <section
+      aria-labelledby="dashboard-session-security-heading"
+      className="market-card market-card-static p-5 sm:p-6 lg:col-span-2"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2
+            id="dashboard-session-security-heading"
+            className="text-base font-semibold text-text-primary"
+          >
+            {t("sessionSecurity")}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-secondary">{t("logoutAllDevicesHint")}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            void onSignOut();
+          }}
+          className="market-action-secondary shrink-0 px-5 py-2.5"
+        >
+          {t("logoutAllDevices")}
+        </button>
+      </div>
+    </section>
   );
 }
 
 function SettingsDangerZoneSection({
-  onSignOut,
   deleteConfirm,
   onDeleteConfirmChange,
   deleteMessage,
   onDeleteAccount,
+  onResetDelete,
   isDeletingAccount,
+  deleteConfirmToken,
+  isDeleteConfirmed,
 }: {
-  onSignOut: () => Promise<void>;
   deleteConfirm: string;
   onDeleteConfirmChange: (value: string) => void;
   deleteMessage: SettingsStatusMessage | null;
   onDeleteAccount: () => void;
+  onResetDelete: () => void;
   isDeletingAccount: boolean;
+  deleteConfirmToken: string;
+  isDeleteConfirmed: boolean;
 }) {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const closeDeleteDialog = () => {
+    if (isDeletingAccount) return;
+    setIsDeleteDialogOpen(false);
+    onResetDelete();
+  };
 
   return (
-    <div className="rounded-xl border border-error/30 bg-error/5 p-6">
-      <h2 className="text-lg font-semibold text-error mb-2">{t("dangerZone")}</h2>
-      <div className="space-y-6">
-        <div>
-          <p className="text-sm text-secondary mb-4">{t("logoutWarning")}</p>
-          <button
-            onClick={() => {
-              void onSignOut();
-            }}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-error px-6 py-2.5 font-semibold text-white transition-colors hover:bg-error/90"
-          >
-            {tCommon("logout")}
-          </button>
+    <section
+      aria-labelledby="dashboard-danger-zone-heading"
+      className="rounded-xl border border-error/30 bg-error/[0.06] p-5 sm:p-6 lg:col-span-2"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="max-w-2xl">
+          <h2 id="dashboard-danger-zone-heading" className="text-lg font-semibold text-error">
+            {t("dangerZone")}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-secondary">{t("deleteAccountWarning")}</p>
         </div>
-
-        <form
-          className="pt-6 border-t border-error/20"
-          action={() => {
-            onDeleteAccount();
-          }}
+        <button
+          type="button"
+          onClick={() => setIsDeleteDialogOpen(true)}
+          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-error bg-error/[0.03] px-5 py-2.5 font-semibold text-error transition-colors hover:bg-error/10"
         >
-          <h3 className="text-sm font-semibold text-error mb-2">{t("deleteAccount")}</h3>
-          <p className="text-sm text-secondary mb-4">{t("deleteAccountWarning")}</p>
-          <label
-            htmlFor="dashboard-delete-confirm"
-            className="block text-sm font-medium text-primary mb-2"
-          >
-            {t("deleteConfirmLabel")}
-          </label>
-          <input
-            id="dashboard-delete-confirm"
-            name="deleteConfirm"
-            type="text"
-            value={deleteConfirm}
-            onChange={(e) => onDeleteConfirmChange(e.target.value)}
-            className="input"
-            placeholder="DELETE"
-            autoComplete="off"
-          />
-
-          <SettingsStatusAlert message={deleteMessage} className="mt-4" />
-
-          <button
-            type="submit"
-            disabled={isDeletingAccount || deleteConfirm.trim().toUpperCase() !== "DELETE"}
-            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-error px-6 py-2.5 font-semibold text-white transition-colors hover:bg-error/90 disabled:opacity-50"
-          >
-            {isDeletingAccount ? tCommon("loading") : t("deleteAccount")}
-          </button>
-        </form>
+          {t("deleteAccount")}
+        </button>
       </div>
-    </div>
+
+      <Dialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setIsDeleteDialogOpen(true);
+          } else {
+            closeDeleteDialog();
+          }
+        }}
+      >
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-error">{t("deleteDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("deleteDialogDescription")}</DialogDescription>
+          </DialogHeader>
+          <form
+            action={() => {
+              onDeleteAccount();
+            }}
+          >
+            <label
+              htmlFor="dashboard-delete-confirm"
+              className="mb-2 block text-sm font-medium text-text-primary"
+            >
+              {t("deleteConfirmLabel", { token: deleteConfirmToken })}
+            </label>
+            <input
+              id="dashboard-delete-confirm"
+              name="deleteConfirm"
+              type="text"
+              value={deleteConfirm}
+              onChange={(event) => onDeleteConfirmChange(event.target.value)}
+              className="input"
+              placeholder={deleteConfirmToken}
+              autoComplete="off"
+              spellCheck={false}
+              aria-describedby="dashboard-delete-confirm-help"
+            />
+            <p id="dashboard-delete-confirm-help" className="mt-2 text-sm leading-5 text-secondary">
+              {t("deleteDialogDescription")}
+            </p>
+
+            <SettingsStatusAlert message={deleteMessage} className="mt-4" />
+
+            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={isDeletingAccount}
+                onClick={closeDeleteDialog}
+                className="market-action-secondary px-5 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                type="submit"
+                disabled={isDeletingAccount || !isDeleteConfirmed}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-error bg-error px-5 py-2.5 font-semibold text-white transition-colors hover:bg-error/90 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-secondary disabled:opacity-100"
+              >
+                {isDeletingAccount ? tCommon("loading") : t("deleteAccount")}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </section>
   );
 }
 
-// Settings Tab - simplified, name change removed per user request
+type SettingsMfaState = {
+  challenge: { factorId: string; challengeId: string } | null;
+  code: string;
+  error: string | null;
+  isVerifying: boolean;
+};
+
+const INITIAL_SETTINGS_MFA_STATE: SettingsMfaState = {
+  challenge: null,
+  code: "",
+  error: null,
+  isVerifying: false,
+};
+
+function SettingsMfaDialog({
+  state,
+  onCodeChange,
+  onClose,
+  onVerify,
+}: {
+  state: SettingsMfaState;
+  onCodeChange: (value: string) => void;
+  onClose: () => void;
+  onVerify: () => void;
+}) {
+  const t = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
+  const isCodeValid = /^\d{6}$/.test(state.code.trim());
+
+  return (
+    <Dialog
+      open={Boolean(state.challenge)}
+      onOpenChange={(open) => {
+        if (!open && !state.isVerifying) onClose();
+      }}
+    >
+      <DialogContent showCloseButton={false} className="sm:max-w-md">
+        <DialogHeader className="text-left">
+          <DialogTitle>{t("mfaDialogTitle")}</DialogTitle>
+          <DialogDescription>{t("mfaDialogDescription")}</DialogDescription>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          action={() => {
+            onVerify();
+          }}
+        >
+          <div>
+            <label htmlFor="dashboard-settings-mfa-code" className="mb-2 block text-sm font-medium text-primary">
+              {t("mfaCode")}
+            </label>
+            <input
+              id="dashboard-settings-mfa-code"
+              name="mfaCode"
+              type="text"
+              value={state.code}
+              onChange={(event) => onCodeChange(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="input text-center tracking-[0.35em]"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              required
+            />
+          </div>
+
+          <SettingsStatusAlert
+            message={state.error ? { type: "error", text: state.error } : null}
+          />
+
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <DialogClose asChild>
+              <button
+                type="button"
+                disabled={state.isVerifying}
+                className="market-action-secondary px-5 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t("cancel")}
+              </button>
+            </DialogClose>
+            <button
+              type="submit"
+              disabled={state.isVerifying || !isCodeValid}
+              className="market-action-account px-5 py-2.5 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-secondary disabled:opacity-100"
+            >
+              {state.isVerifying ? tCommon("loading") : t("verifyMfaAndChangePassword")}
+            </button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function SettingsTab({
   profile,
   signOut,
@@ -2947,13 +3269,16 @@ function SettingsTab({
   const locale = useLocale();
   const market = useMarket();
   const supabase = useMemo(() => createClient(), []);
+  const { replace, refresh } = useRouter();
   const [state, dispatch] = useReducer(
     settingsTabReducer,
     profile,
     createInitialSettingsTabState,
   );
+  const [mfaState, setMfaState] = useState<SettingsMfaState>(INITIAL_SETTINGS_MFA_STATE);
   const {
     phone,
+    savedPhone,
     isSaving,
     saveMessage,
     newPassword,
@@ -2969,6 +3294,37 @@ function SettingsTab({
     newPassword.length >= MIN_PASSWORD_LENGTH &&
     confirmPassword.length >= MIN_PASSWORD_LENGTH &&
     newPassword === confirmPassword;
+  const isPhoneDirty =
+    normalizePhoneNumber(phone, market.callingCode) !==
+    normalizePhoneNumber(savedPhone, market.callingCode);
+  const deleteConfirmToken = t("deleteConfirmToken");
+  const isDeleteConfirmed =
+    deleteConfirm.trim().toLocaleUpperCase(locale) ===
+    deleteConfirmToken.toLocaleUpperCase(locale);
+
+  const submitPasswordChange = useCallback(
+    () =>
+      withTimeout(
+        fetch("/api/account/password", {
+          method: "POST",
+          headers: createCsrfHeaders({
+            "Content-Type": "application/json",
+          }),
+          body: JSON.stringify({ password: newPassword }),
+        }),
+        REQUEST_TIMEOUT_MS,
+      ),
+    [newPassword],
+  );
+
+  const markPasswordUpdated = () => {
+    dispatch({
+      type: "setPasswordMessage",
+      value: { type: "success", text: t("passwordUpdated") },
+    });
+    dispatch({ type: "setNewPassword", value: "" });
+    dispatch({ type: "setConfirmPassword", value: "" });
+  };
 
   const handleChangePassword = async () => {
     if (!user) return;
@@ -2997,65 +3353,37 @@ function SettingsTab({
       return;
     }
 
-    const submitPasswordChange = () =>
-      withTimeout(
-        fetch("/api/account/password", {
-          method: "POST",
-          headers: createCsrfHeaders({
-            "Content-Type": "application/json",
-          }),
-          body: JSON.stringify({
-            password: newPassword,
-          }),
-        }),
-        REQUEST_TIMEOUT_MS,
-      );
-
     try {
-      let response = await submitPasswordChange();
-      let payload = (await response.json().catch(() => null)) as
+      const response = await submitPasswordChange();
+      const payload = (await response.json().catch(() => null)) as
         | { ok?: boolean; error?: string; code?: string }
         | null;
 
       if (response.status === 403 && payload?.code === "mfa_required") {
-        const code = window.prompt(
-          locale === "ro"
-            ? "Introduceți codul de 6 cifre din aplicația de autentificare."
-            : "Zadajte 6-miestny kód z autentifikačnej aplikácie.",
-        )?.trim();
+        const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+        if (factorsError) throw factorsError;
 
-        if (!code) {
+        const factor = factors?.all?.find((candidate) => candidate.status === "verified");
+        if (!factor) {
           dispatch({
             type: "setPasswordMessage",
-            value: { type: "error", text: t("passwordUpdateFailed") },
+            value: { type: "error", text: t("mfaNoFactors") },
           });
           return;
         }
 
-        const { data: factors, error: factorsError } =
-          await supabase.auth.mfa.listFactors();
-        if (factorsError) throw factorsError;
-
-        const factor = factors?.all?.find(
-          (candidate) => candidate.status === "verified",
-        );
-        if (!factor) throw new Error("No verified MFA factor");
-
-        const { data: challenge, error: challengeError } =
-          await supabase.auth.mfa.challenge({ factorId: factor.id });
+        const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
+          factorId: factor.id,
+        });
         if (challengeError) throw challengeError;
 
-        const { error: verifyError } = await supabase.auth.mfa.verify({
-          factorId: factor.id,
-          challengeId: challenge.id,
-          code,
+        setMfaState({
+          challenge: { factorId: factor.id, challengeId: challenge.id },
+          code: "",
+          error: null,
+          isVerifying: false,
         });
-        if (verifyError) throw verifyError;
-
-        response = await submitPasswordChange();
-        payload = (await response.json().catch(() => null)) as
-          | { ok?: boolean; error?: string; code?: string }
-          | null;
+        return;
       }
 
       if (!response.ok || !payload?.ok) {
@@ -3069,12 +3397,7 @@ function SettingsTab({
         return;
       }
 
-      dispatch({
-        type: "setPasswordMessage",
-        value: { type: "success", text: t("passwordUpdated") },
-      });
-      dispatch({ type: "setNewPassword", value: "" });
-      dispatch({ type: "setConfirmPassword", value: "" });
+      markPasswordUpdated();
     } catch (err) {
       dispatch({
         type: "setPasswordMessage",
@@ -3091,8 +3414,57 @@ function SettingsTab({
     }
   };
 
+  const handleVerifyMfaAndChangePassword = async () => {
+    const challenge = mfaState.challenge;
+    const code = mfaState.code.trim();
+    if (!challenge || !/^\d{6}$/.test(code)) {
+      setMfaState((current) => ({ ...current, error: t("mfaCodeInvalid") }));
+      return;
+    }
+
+    setMfaState((current) => ({ ...current, error: null, isVerifying: true }));
+
+    try {
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: challenge.factorId,
+        challengeId: challenge.challengeId,
+        code,
+      });
+      if (verifyError) {
+        setMfaState((current) => ({ ...current, error: t("mfaCodeInvalid") }));
+        return;
+      }
+
+      const response = await submitPasswordChange();
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        setMfaState((current) => ({
+          ...current,
+          error: payload?.error || t("passwordUpdateFailed"),
+        }));
+        return;
+      }
+
+      setMfaState(INITIAL_SETTINGS_MFA_STATE);
+      markPasswordUpdated();
+    } catch (err) {
+      setMfaState((current) => ({
+        ...current,
+        error:
+          err instanceof Error && err.message === "timeout"
+            ? t("requestTimeout")
+            : t("passwordUpdateFailed"),
+      }));
+    } finally {
+      setMfaState((current) => ({ ...current, isVerifying: false }));
+    }
+  };
+
   const handleSavePhone = async () => {
-    if (!user) return;
+    if (!user || !isPhoneDirty) return;
     dispatch({ type: "setIsSaving", value: true });
     dispatch({ type: "setSaveMessage", value: null });
 
@@ -3121,12 +3493,11 @@ function SettingsTab({
           type: "setSaveMessage",
           value: {
             type: "error",
-            text:
-              phonePayload?.error ||
-              t("saveFailed"),
+            text: phonePayload?.error || t("saveFailed"),
           },
         });
       } else {
+        dispatch({ type: "setSavedPhone", value: nextPhone });
         dispatch({
           type: "setSaveMessage",
           value: { type: "success", text: t("changesSaved") },
@@ -3152,10 +3523,13 @@ function SettingsTab({
   const handleDeleteAccount = async () => {
     if (!user) return;
 
-    if (deleteConfirm.trim().toUpperCase() !== "DELETE") {
+    if (!isDeleteConfirmed) {
       dispatch({
         type: "setDeleteMessage",
-        value: { type: "error", text: t("deleteConfirmMismatch") },
+        value: {
+          type: "error",
+          text: t("deleteConfirmMismatch", { token: deleteConfirmToken }),
+        },
       });
       return;
     }
@@ -3194,7 +3568,8 @@ function SettingsTab({
         type: "setDeleteMessage",
         value: { type: "success", text: t("accountDeleted") },
       });
-      window.location.href = "/";
+      replace("/");
+      refresh();
     } catch (err) {
       dispatch({
         type: "setDeleteMessage",
@@ -3212,49 +3587,71 @@ function SettingsTab({
   };
 
   return (
-    <div className="max-w-lg space-y-8">
-      <SettingsAccountInfoSection profile={profile} />
-      <SettingsContactInfoSection
-        phone={phone}
-        onPhoneChange={(value) => dispatch({ type: "setPhone", value })}
-        onPhoneBlur={() =>
-          dispatch({
-            type: "setPhone",
-            value: normalizePhoneNumber(phone, market.callingCode),
-          })
+    <>
+      <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-2 lg:items-start">
+        <SettingsPersonalDetailsSection
+          profile={profile}
+          email={user?.email}
+          phone={phone}
+          onPhoneChange={(value) => {
+            dispatch({ type: "setPhone", value });
+            dispatch({ type: "setSaveMessage", value: null });
+          }}
+          onPhoneBlur={() =>
+            dispatch({
+              type: "setPhone",
+              value: normalizePhoneNumber(phone, market.callingCode),
+            })
+          }
+          saveMessage={saveMessage}
+          onSave={() => {
+            void handleSavePhone();
+          }}
+          isSaving={isSaving}
+          isPhoneDirty={isPhoneDirty}
+        />
+        <SettingsSecuritySection
+          newPassword={newPassword}
+          confirmPassword={confirmPassword}
+          isPasswordFormValid={isPasswordFormValid}
+          onNewPasswordChange={(value) => dispatch({ type: "setNewPassword", value })}
+          onConfirmPasswordChange={(value) =>
+            dispatch({ type: "setConfirmPassword", value })
+          }
+          passwordMessage={passwordMessage}
+          onChangePassword={() => {
+            void handleChangePassword();
+          }}
+          isUpdatingPassword={isUpdatingPassword}
+        />
+        <SettingsSessionsSection onSignOut={signOut} />
+        <SettingsDangerZoneSection
+          deleteConfirm={deleteConfirm}
+          onDeleteConfirmChange={(value) => dispatch({ type: "setDeleteConfirm", value })}
+          deleteMessage={deleteMessage}
+          onDeleteAccount={() => {
+            void handleDeleteAccount();
+          }}
+          onResetDelete={() => {
+            dispatch({ type: "setDeleteConfirm", value: "" });
+            dispatch({ type: "setDeleteMessage", value: null });
+          }}
+          isDeletingAccount={isDeletingAccount}
+          deleteConfirmToken={deleteConfirmToken}
+          isDeleteConfirmed={isDeleteConfirmed}
+        />
+      </div>
+
+      <SettingsMfaDialog
+        state={mfaState}
+        onCodeChange={(code) =>
+          setMfaState((current) => ({ ...current, code, error: null }))
         }
-        saveMessage={saveMessage}
-        onSave={() => {
-          void handleSavePhone();
+        onClose={() => setMfaState(INITIAL_SETTINGS_MFA_STATE)}
+        onVerify={() => {
+          void handleVerifyMfaAndChangePassword();
         }}
-        isSaving={isSaving}
       />
-      <SettingsSecuritySection
-        newPassword={newPassword}
-        confirmPassword={confirmPassword}
-        isPasswordFormValid={isPasswordFormValid}
-        onNewPasswordChange={(value) => dispatch({ type: "setNewPassword", value })}
-        onConfirmPasswordChange={(value) =>
-          dispatch({ type: "setConfirmPassword", value })
-        }
-        passwordMessage={passwordMessage}
-        onChangePassword={() => {
-          void handleChangePassword();
-        }}
-        isUpdatingPassword={isUpdatingPassword}
-      />
-      <SettingsDangerZoneSection
-        onSignOut={signOut}
-        deleteConfirm={deleteConfirm}
-        onDeleteConfirmChange={(value) =>
-          dispatch({ type: "setDeleteConfirm", value })
-        }
-        deleteMessage={deleteMessage}
-        onDeleteAccount={() => {
-          void handleDeleteAccount();
-        }}
-        isDeletingAccount={isDeletingAccount}
-      />
-    </div>
+    </>
   );
 }

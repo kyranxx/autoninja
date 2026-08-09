@@ -307,6 +307,24 @@ export function EyeIcon({ className }: { className?: string }) {
   );
 }
 
+export function EyeOffIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 4.2A10.8 10.8 0 0112 4c4.5 0 8.3 3 9.5 7.1a11.8 11.8 0 01-2.1 3.8M6.6 6.6A11.4 11.4 0 002.5 11c1.2 4.1 5 7.1 9.5 7.1 1.3 0 2.5-.2 3.6-.6"
+      />
+    </svg>
+  );
+}
+
 export function ChevronDownIcon({ className }: { className?: string }) {
   return (
     <svg

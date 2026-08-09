@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { MarketCode } from "@/config/markets";
 import { MarketProvider } from "@/context/MarketContext";
 import Footer from "./Footer";
@@ -40,6 +40,10 @@ vi.mock("next/link", () => ({
     </a>
   ),
 }));
+
+afterEach(() => {
+  cleanup();
+});
 
 function renderFooter(marketCode: MarketCode = "SK") {
   return render(
@@ -108,5 +112,21 @@ describe("Footer", () => {
         expect(link).toHaveAttribute("data-prefetch", "false");
       }
     }
+  });
+
+  it("uses the compact footer at every breakpoint on the account dashboard", () => {
+    useLocaleMock.mockReturnValue("sk");
+    usePathnameMock.mockReturnValue("/moj-ucet");
+
+    renderFooter();
+
+    expect(screen.getByRole("contentinfo")).toHaveAttribute(
+      "data-mobile-variant",
+      "compact",
+    );
+    expect(document.querySelectorAll("details")).toHaveLength(0);
+    expect(document.querySelector("[data-account-footer-compact]")).not.toBeNull();
+    expect(document.querySelector("[data-full-footer-desktop]")).toBeNull();
+    expect(screen.getAllByRole("link", { name: "AutoNinja.sk" })).toHaveLength(1);
   });
 });
