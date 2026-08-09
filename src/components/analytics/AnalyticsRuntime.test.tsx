@@ -10,11 +10,6 @@ const { resolveClarityProjectIdForHostMock } = vi.hoisted(() => ({
   resolveClarityProjectIdForHostMock: vi.fn(),
 }));
 
-vi.mock("@/lib/analytics/posthog-client", () => ({
-  initPostHogClient: vi.fn(() => Promise.resolve()),
-  optOutPostHogClient: vi.fn(),
-}));
-
 vi.mock("@/lib/analytics/clarity", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/analytics/clarity")>();
   return {

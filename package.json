@@ -32,7 +32,6 @@
     "lucide-react": "^1.28.0",
     "next": "^16.2.12",
     "next-intl": "^4.12.0",
-    "posthog-js": "^1.373.5",
     "radix-ui": "^1.4.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -96,9 +95,6 @@
     },
     "next": {
       "postcss": "8.5.25"
-    },
-    "posthog-js": {
-      "dompurify": "3.4.13"
     },
     "qs": "6.15.2",
     "sharp": "0.35.3",

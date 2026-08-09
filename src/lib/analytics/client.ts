@@ -8,10 +8,6 @@ import {
   type AnalyticsEventName,
   type AnalyticsEventPayload,
 } from "@/lib/analytics/events";
-import {
-  capturePostHogEvent,
-  identifyPostHogUser,
-} from "@/lib/analytics/posthog-client";
 import { resolveMarketCodeFromHost } from "@/config/markets";
 
 type DataLayerEntry = {
@@ -133,8 +129,6 @@ export function trackAnalyticsEvent<Name extends AnalyticsEventName>(
     browserWindow.gtag("event", name, eventPayload);
   }
 
-  capturePostHogEvent(name, eventPayload);
-
   queueFirstPartyAnalyticsEvent(name, eventPayload);
 
   return true;
@@ -158,6 +152,4 @@ export function identifyAnalyticsUser(userId: string | null) {
       w.clarity("identify", userId);
     }
   }
-
-  identifyPostHogUser(userId);
 }

@@ -9,10 +9,6 @@ import {
 } from "@/lib/privacy/cookie-consent";
 import { getAnalyticsUserId } from "@/lib/analytics/events";
 import {
-  initPostHogClient,
-  optOutPostHogClient,
-} from "@/lib/analytics/posthog-client";
-import {
   buildClarityConsentV2,
   resolveClarityProjectIdForHost,
 } from "@/lib/analytics/clarity";
@@ -151,8 +147,6 @@ export function AnalyticsRuntime() {
       const enabled = Boolean(consent?.analytics);
       analyticsConsentEnabledRef.current = enabled;
       const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
-      const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
-      const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim();
       const clarityProjectId = getMicrosoftClarityProjectId();
 
       if (enabled && gaMeasurementId) {
@@ -168,19 +162,6 @@ export function AnalyticsRuntime() {
       }
 
       updateMicrosoftClarityConsent(consent);
-
-      if (enabled && posthogKey && posthogHost) {
-        void initPostHogClient(posthogKey, posthogHost, getAnalyticsUserId()).catch(
-          (error) => {
-            if (process.env.NODE_ENV !== "production") {
-              console.warn("PostHog initialization failed", error);
-            }
-          },
-        );
-        return;
-      }
-
-      optOutPostHogClient();
     };
 
     const syncConsent = () => {

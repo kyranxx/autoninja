@@ -1,33 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/analytics/posthog-client", () => ({
-  capturePostHogEvent: vi.fn(),
-  identifyPostHogUser: vi.fn(),
-}));
-
-import {
-  capturePostHogEvent,
-  identifyPostHogUser,
-} from "@/lib/analytics/posthog-client";
 import { identifyAnalyticsUser, trackAnalyticsEvent } from "@/lib/analytics/client";
 
-const mockedCapturePostHogEvent = vi.mocked(capturePostHogEvent);
-const mockedIdentifyPostHogUser = vi.mocked(identifyPostHogUser);
-
 describe("trackAnalyticsEvent", () => {
+  const sendBeacon = vi.fn(() => true);
+
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
     delete (window as Window & { dataLayer?: unknown }).dataLayer;
     delete (window as Window & { gtag?: unknown }).gtag;
     delete (window as Window & { clarity?: unknown }).clarity;
+    Object.defineProperty(navigator, "sendBeacon", {
+      configurable: true,
+      value: sendBeacon,
+    });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("pushes to dataLayer when consent is enabled and payload is valid", () => {
+  it("routes each accepted event through first-party ingestion once", () => {
     window.localStorage.setItem(
       "autoninja_cookie_consent",
       JSON.stringify({ analytics: true }),
@@ -40,12 +34,11 @@ describe("trackAnalyticsEvent", () => {
     });
 
     expect(result).toBe(true);
-    expect(mockedCapturePostHogEvent).toHaveBeenCalledWith("listing_viewed", {
-      adId: "f6d65fa7-1f26-4932-94f4-5a5683238e97",
-      source: "seo_city_route",
-      position: 1,
-      marketCode: "SK",
-    });
+    expect(sendBeacon).toHaveBeenCalledTimes(1);
+    expect(sendBeacon).toHaveBeenCalledWith(
+      "/api/analytics/events",
+      expect.any(Blob),
+    );
     const dataLayer = (window as Window & { dataLayer?: Array<Record<string, unknown>> })
       .dataLayer;
     expect(dataLayer).toBeDefined();
@@ -65,7 +58,7 @@ describe("trackAnalyticsEvent", () => {
     });
 
     expect(result).toBe(false);
-    expect(mockedCapturePostHogEvent).not.toHaveBeenCalled();
+    expect(sendBeacon).not.toHaveBeenCalled();
     const dataLayer = (window as Window & { dataLayer?: Array<Record<string, unknown>> })
       .dataLayer;
     expect(dataLayer).toBeUndefined();
@@ -83,7 +76,7 @@ describe("trackAnalyticsEvent", () => {
     } as never);
 
     expect(result).toBe(false);
-    expect(mockedCapturePostHogEvent).not.toHaveBeenCalled();
+    expect(sendBeacon).not.toHaveBeenCalled();
     const dataLayer = (window as Window & { dataLayer?: Array<Record<string, unknown>> })
       .dataLayer;
     expect(dataLayer).toBeUndefined();
@@ -103,11 +96,9 @@ describe("trackAnalyticsEvent", () => {
 
     expect(gtag).toHaveBeenCalledWith("set", { user_id: "user-123" });
     expect(clarity).toHaveBeenCalledWith("identify", "user-123");
-    expect(mockedIdentifyPostHogUser).toHaveBeenCalledWith("user-123");
 
     identifyAnalyticsUser(null);
 
     expect(gtag).toHaveBeenCalledWith("set", { user_id: null });
-    expect(mockedIdentifyPostHogUser).toHaveBeenCalledWith(null);
   });
 });
