@@ -799,7 +799,7 @@ export default function CarDetailClient({
         return;
       }
 
-      if (payload?.inquiryId) {
+      if (payload?.inquiryId && user.id !== car.seller.id) {
         trackAnalyticsEvent("lead_submitted", {
           leadId: payload.inquiryId,
           adId: car.id,

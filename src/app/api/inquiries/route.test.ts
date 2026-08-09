@@ -245,7 +245,7 @@ describe("/api/inquiries", () => {
       expect(submitInquiryMock).not.toHaveBeenCalled();
     });
 
-    it("rejects self-directed inquiry attempts by the ad seller", async () => {
+    it("allows the ad seller to send a message to themselves", async () => {
       getUserMock.mockResolvedValue({ data: { user: { id: SELLER_ID } } });
 
       const response = await POST(
@@ -257,11 +257,18 @@ describe("/api/inquiries", () => {
       );
       const payload = await response.json();
 
-      expect(response.status).toBe(400);
-      expect(payload).toEqual({
-        error: "Nie je možné odoslať správu tomuto prijemcovi.",
-      });
-      expect(submitInquiryMock).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      expect(payload).toEqual({ ok: true, inquiryId: INQUIRY_ID });
+      expect(submitInquiryMock).toHaveBeenCalledWith(
+        expect.anything(),
+        {
+          adId: AD_ID,
+          senderId: SELLER_ID,
+          recipientId: SELLER_ID,
+          message: "Moja poznámka.",
+          phone: null,
+        },
+      );
     });
 
     it("returns not found when the ad cannot be loaded", async () => {

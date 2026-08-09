@@ -107,8 +107,9 @@ export async function POST(request: NextRequest) {
 
   const isAdSeller = ad.seller_id === user.id;
   const recipientId = parsed.data.recipientId || ad.seller_id;
+  const isSelfDirected = recipientId === user.id;
 
-  if (!recipientId || recipientId === user.id) {
+  if (!recipientId) {
     return NextResponse.json(
       { error: "Nie je možné odoslať správu tomuto prijemcovi." },
       { status: 400 },
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (isAdSeller) {
+  if (isAdSeller && !isSelfDirected) {
     const { count, error: pairError } = await supabase
       .from("inquiries")
       .select("id", { count: "exact", head: true })

@@ -507,7 +507,7 @@ function useDealerDashboardController({
 
   // Fetch ads for the dealer
   useEffect(() => {
-    if (!dealer) return;
+    if (!dealer || !user) return;
 
     const fetchDealerAds = async () => {
       setAdsState((prev) => ({
@@ -562,7 +562,8 @@ function useDealerDashboardController({
             const { count, error: inquiriesError } = await supabase
               .from("inquiries")
               .select("id", { count: "exact", head: true })
-              .in("ad_id", adIds);
+              .in("ad_id", adIds)
+              .neq("sender_id", user.id);
 
             if (inquiriesError) {
               console.error("Inquiries count fetch error:", inquiriesError);
@@ -587,7 +588,7 @@ function useDealerDashboardController({
     };
 
     fetchDealerAds();
-  }, [dealer, marketCode, supabase]);
+  }, [dealer, marketCode, supabase, user]);
 
   useEffect(() => {
     let cancelled = false;

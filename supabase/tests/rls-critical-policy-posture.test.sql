@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(24);
+select plan(25);
 
 select is(
   (
@@ -125,6 +125,21 @@ select ok(
       and not (roles @> array['anon'::name])
   ),
   'credit_transactions read policy is authenticated-only'
+);
+
+select ok(
+  exists(
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'inquiries'
+      and policyname = 'Users can send inquiries'
+      and cmd = 'INSERT'
+      and roles @> array['authenticated'::name]
+      and with_check ilike '%sender_id%auth.uid()%'
+      and with_check not ilike '%recipient_id%'
+  ),
+  'authenticated inquiry senders may address themselves'
 );
 
 select ok(
