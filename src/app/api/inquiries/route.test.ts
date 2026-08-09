@@ -138,6 +138,20 @@ describe("/api/inquiries", () => {
   });
 
   describe("POST /api/inquiries", () => {
+    it("rejects an oversized captcha token before auth or verification", async () => {
+      const response = await POST(
+        createPostRequest({
+          adId: AD_ID,
+          message: "Mam zaujem o auto.",
+          captchaToken: "x".repeat(2049),
+        }),
+      );
+
+      expect(response.status).toBe(400);
+      expect(verifyTurnstileTokenMock).not.toHaveBeenCalled();
+      expect(getUserMock).not.toHaveBeenCalled();
+    });
+
     it("requires an authenticated buyer before captcha or insert work", async () => {
       getUserMock.mockResolvedValue({ data: { user: null } });
 

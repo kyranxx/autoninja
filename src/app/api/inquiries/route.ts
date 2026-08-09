@@ -19,7 +19,7 @@ const SubmitInquirySchema = z.object({
   adId: z.string().uuid(),
   recipientId: z.string().uuid().optional(),
   message: z.string().trim().min(1).max(2000),
-  captchaToken: z.string().min(1),
+  captchaToken: z.string().min(1).max(2048),
 });
 
 const DeleteInquirySchema = z.object({

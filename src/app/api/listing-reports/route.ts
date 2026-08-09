@@ -22,7 +22,7 @@ const SubmitListingReportSchema = z.object({
     "other",
   ]),
   details: z.string().trim().min(10).max(1000),
-  captchaToken: z.string().min(1),
+  captchaToken: z.string().min(1).max(2048),
 });
 
 function getRequestHostname(request: NextRequest): string | null {

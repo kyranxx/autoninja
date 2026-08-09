@@ -1,6 +1,8 @@
 const TURNSTILE_VERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const TURNSTILE_TEST_SECRET_KEY = "1x0000000000000000000000000000000AA";
+const TURNSTILE_TOKEN_MAX_LENGTH = 2048;
+const TURNSTILE_VERIFY_TIMEOUT_MS = 10_000;
 
 type TurnstileApiResponse = {
   success: boolean;
@@ -95,7 +97,7 @@ export async function verifyTurnstileToken(
   input: VerifyTurnstileTokenInput,
 ): Promise<VerifyTurnstileTokenResult> {
   const token = input.token.trim();
-  if (!token) {
+  if (!token || token.length > TURNSTILE_TOKEN_MAX_LENGTH) {
     return { ok: false, error: "Captcha token chyba." };
   }
 
@@ -124,6 +126,7 @@ export async function verifyTurnstileToken(
       },
       body: payload.toString(),
       cache: "no-store",
+      signal: AbortSignal.timeout(TURNSTILE_VERIFY_TIMEOUT_MS),
     });
 
     if (!response.ok) {

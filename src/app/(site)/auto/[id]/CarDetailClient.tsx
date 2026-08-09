@@ -808,15 +808,16 @@ export default function CarDetailClient({
       }
 
       toast.success(copy.text.message.sent);
+      dispatch({ type: "send_message_finished", messageSent: true });
+    } catch {
+      toast.error(copy.text.message.sendFailed);
+      dispatch({ type: "send_message_finished", messageSent: false });
+    } finally {
       setInteractionState((current) => ({
         ...current,
         contactCaptchaKey: current.contactCaptchaKey + 1,
         contactCaptchaToken: null,
       }));
-      dispatch({ type: "send_message_finished", messageSent: true });
-    } catch {
-      toast.error(copy.text.message.sendFailed);
-      dispatch({ type: "send_message_finished", messageSent: false });
     }
   };
 
@@ -865,15 +866,18 @@ export default function CarDetailClient({
       setInteractionState((current) => ({
         ...current,
         isReportModalOpen: false,
-        reportCaptchaKey: current.reportCaptchaKey + 1,
-        reportCaptchaToken: null,
         reportCategory: "fraud",
         reportDetails: "",
       }));
     } catch {
       toast.error(copy.text.report.failed);
     } finally {
-      setInteractionState((current) => ({ ...current, isReporting: false }));
+      setInteractionState((current) => ({
+        ...current,
+        isReporting: false,
+        reportCaptchaKey: current.reportCaptchaKey + 1,
+        reportCaptchaToken: null,
+      }));
     }
   };
 

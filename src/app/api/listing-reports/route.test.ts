@@ -111,6 +111,20 @@ describe("POST /api/listing-reports", () => {
     });
   });
 
+  it("rejects an oversized captcha token before verification", async () => {
+    const response = await POST(
+      createRequest({
+        adId: "11111111-1111-4111-8111-111111111111",
+        category: "fraud",
+        details: "This listing looks suspicious and misleading.",
+        captchaToken: "x".repeat(2049),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(verifyTurnstileTokenMock).not.toHaveBeenCalled();
+  });
+
   it("stores a report for an active ad", async () => {
     const response = await POST(
       createRequest({

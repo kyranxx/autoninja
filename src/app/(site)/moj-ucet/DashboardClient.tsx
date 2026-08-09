@@ -2146,14 +2146,17 @@ function useMessagesTabView() {
       updateMessageUiState((current) => ({
         ...current,
         replyMessage: "",
-        replyCaptchaToken: null,
-        captchaInstanceKey: current.captchaInstanceKey + 1,
       }));
       requestMessagesReload();
     } catch {
       toast.error(inlineCopy.replyFailed);
     } finally {
-      updateMessageUiState({ isSendingReply: false });
+      updateMessageUiState((current) => ({
+        ...current,
+        replyCaptchaToken: null,
+        captchaInstanceKey: current.captchaInstanceKey + 1,
+        isSendingReply: false,
+      }));
     }
   }, [activeConversation, inlineCopy, replyCaptchaToken, replyMessage]);
 

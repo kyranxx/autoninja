@@ -14,6 +14,16 @@ describe("verifyTurnstileToken", () => {
     expect(result).toEqual({ ok: false, error: "Captcha token chyba." });
   });
 
+  it("rejects tokens longer than Cloudflare's maximum before verification", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await verifyTurnstileToken({ token: "x".repeat(2049) });
+
+    expect(result).toEqual({ ok: false, error: "Captcha token chyba." });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("returns error when verification endpoint does not respond with ok", async () => {
     vi.stubGlobal(
       "fetch",
@@ -32,6 +42,10 @@ describe("verifyTurnstileToken", () => {
   });
 
   it("returns success when captcha verification succeeds", async () => {
+    const timeoutSignal = new AbortController().signal;
+    const timeoutSpy = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(timeoutSignal);
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -58,6 +72,8 @@ describe("verifyTurnstileToken", () => {
     expect(requestBody).toContain("response=token-2");
     expect(requestBody).toContain("remoteip=127.0.0.1");
     expect(requestBody).not.toContain("action=");
+    expect(timeoutSpy).toHaveBeenCalledWith(10_000);
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(timeoutSignal);
   });
 
   it("accepts Cloudflare testing-key responses in local development", async () => {
