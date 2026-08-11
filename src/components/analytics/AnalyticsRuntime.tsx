@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   COOKIE_CONSENT_CHANGED_EVENT,
   COOKIE_CONSENT_KEY,
@@ -131,9 +132,30 @@ function initGoogleAnalytics(measurementId: string) {
   window.gtag!("config", measurementId, configOptions);
 }
 
+function GoogleAnalyticsPageView({ measurementId }: { measurementId: string }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+
+  useEffect(() => {
+    if (typeof window.gtag !== "function") return;
+
+    const pagePath = search ? `${pathname}?${search}` : pathname;
+    window.gtag("event", "page_view", {
+      page_location: window.location.href,
+      page_path: pagePath,
+      page_title: document.title,
+      send_to: measurementId,
+    });
+  }, [measurementId, pathname, search]);
+
+  return null;
+}
+
 export function AnalyticsRuntime() {
   const analyticsConsentEnabledRef = useRef(false);
   const consentDefaultsSet = useRef(false);
+  const [activeGaMeasurementId, setActiveGaMeasurementId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!consentDefaultsSet.current && typeof window !== "undefined") {
@@ -145,13 +167,19 @@ export function AnalyticsRuntime() {
   useEffect(() => {
     const applyAnalyticsConsent = (consent: CookieConsent | null) => {
       const enabled = Boolean(consent?.analytics);
+      const wasEnabled = analyticsConsentEnabledRef.current;
       analyticsConsentEnabledRef.current = enabled;
       const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
       const clarityProjectId = getMicrosoftClarityProjectId();
 
-      if (enabled && gaMeasurementId) {
+      if (consent) {
+        updateConsent(consent);
+      }
+
+      if (enabled && gaMeasurementId && !wasEnabled) {
         initGoogleAnalytics(gaMeasurementId);
       }
+      setActiveGaMeasurementId(enabled && gaMeasurementId ? gaMeasurementId : null);
 
       if (enabled && clarityProjectId) {
         initMicrosoftClarity(clarityProjectId);
@@ -168,10 +196,6 @@ export function AnalyticsRuntime() {
       const stored = localStorage.getItem(COOKIE_CONSENT_KEY);
       const consent = parseCookieConsent(stored);
       applyAnalyticsConsent(consent);
-
-      if (consent) {
-        updateConsent(consent);
-      }
     };
 
     syncConsent();
@@ -184,5 +208,9 @@ export function AnalyticsRuntime() {
     };
   }, []);
 
-  return null;
+  return activeGaMeasurementId ? (
+    <Suspense fallback={null}>
+      <GoogleAnalyticsPageView measurementId={activeGaMeasurementId} />
+    </Suspense>
+  ) : null;
 }

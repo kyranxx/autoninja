@@ -10,6 +10,11 @@ const { resolveClarityProjectIdForHostMock } = vi.hoisted(() => ({
   resolveClarityProjectIdForHostMock: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/vysledky",
+  useSearchParams: () => new URLSearchParams("sort=price"),
+}));
+
 vi.mock("@/lib/analytics/clarity", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/analytics/clarity")>();
   return {
@@ -38,7 +43,10 @@ describe("AnalyticsRuntime", () => {
     delete process.env.NEXT_PUBLIC_CLARITY_ID;
     delete process.env.NEXT_PUBLIC_CLARITY_ID_SK;
     delete process.env.NEXT_PUBLIC_CLARITY_ID_RO;
+    delete process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
     delete (window as Window & { clarity?: unknown }).clarity;
+    delete (window as Window & { dataLayer?: unknown }).dataLayer;
+    delete (window as Window & { gtag?: unknown }).gtag;
     resolveClarityProjectIdForHostMock.mockReturnValue(null);
   });
 
@@ -54,6 +62,40 @@ describe("AnalyticsRuntime", () => {
     render(<AnalyticsRuntime />);
 
     expect(document.querySelector('script[src^="https://www.clarity.ms/tag/"]')).toBeNull();
+  });
+
+  it("does not load Google Analytics before analytics consent", () => {
+    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID = "G-AUTONINJA";
+
+    render(<AnalyticsRuntime />);
+
+    expect(document.getElementById("ga4-script")).toBeNull();
+  });
+
+  it("loads Google Analytics and records the current App Router page after consent", async () => {
+    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID = "G-AUTONINJA";
+
+    render(<AnalyticsRuntime />);
+    grantAnalyticsConsent();
+
+    await waitFor(() => {
+      expect(document.getElementById("ga4-script")).toHaveAttribute(
+        "src",
+        "https://www.googletagmanager.com/gtag/js?id=G-AUTONINJA",
+      );
+    });
+
+    await waitFor(() => {
+      const dataLayer = (window as Window & { dataLayer?: unknown[][] }).dataLayer;
+      expect(dataLayer).toContainEqual([
+        "event",
+        "page_view",
+        expect.objectContaining({
+          page_path: "/vysledky?sort=price",
+          send_to: "G-AUTONINJA",
+        }),
+      ]);
+    });
   });
 
   it("loads Microsoft Clarity and sends consent v2 after analytics consent", async () => {
