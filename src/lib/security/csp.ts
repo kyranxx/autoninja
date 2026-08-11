@@ -104,6 +104,7 @@ export function buildCspHeader({
     "https://region1.google-analytics.com",
     "https://stats.g.doubleclick.net",
     "https://www.clarity.ms",
+    "https://c.clarity.ms",
     "https://c.bing.com",
   ]);
 
