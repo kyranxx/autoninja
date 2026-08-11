@@ -7,7 +7,7 @@ import {
   buildLaunchSmokeTargets,
   extractFirstListingPathFromSitemap,
   type LaunchSmokeTarget,
-} from '../scripts/check-local-launch-smoke-core';
+} from '../src/lib/release/launch-smoke';
 
 const BASE_URL = process.env.TEST_URL || 'http://localhost:3000';
 
