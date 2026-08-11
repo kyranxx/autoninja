@@ -55,6 +55,20 @@ describe("buildCspHeader", () => {
     expect(csp).not.toMatch(/script-src [^;]*https:\/\/y\.clarity\.ms/);
   });
 
+  it("allows Google Analytics transport pixels and connections", () => {
+    const csp = buildCspHeader({
+      isDev: false,
+      enableGoogleOneTap: false,
+      includeUpgradeInsecureRequests: true,
+      publicSupabaseUrl: null,
+    });
+
+    expect(csp).toMatch(/img-src [^;]*https:\/\/www\.googletagmanager\.com/);
+    expect(csp).toMatch(/img-src [^;]*https:\/\/www\.google-analytics\.com/);
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/www\.googletagmanager\.com/);
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/www\.google-analytics\.com/);
+  });
+
   it("enables Google One Tap origins only when explicitly enabled", () => {
     const withoutGoogle = buildCspHeader({
       isDev: true,

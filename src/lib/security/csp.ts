@@ -99,6 +99,10 @@ export function buildCspHeader({
     "https://imagedelivery.net",
     ...supabaseImgSrc,
     ...OPENSTREETMAP_TILE_SOURCES,
+    "https://www.googletagmanager.com",
+    "https://www.google-analytics.com",
+    "https://region1.google-analytics.com",
+    "https://stats.g.doubleclick.net",
     "https://www.clarity.ms",
     "https://c.bing.com",
   ]);
