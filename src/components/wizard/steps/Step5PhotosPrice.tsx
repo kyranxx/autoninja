@@ -26,26 +26,6 @@ interface Step5Props extends WizardStepProps {
 
 const EMPTY_SUBMIT_OPTIONS: ListingSubmitOption[] = [];
 
-function getStep5InlineCopy(locale: string) {
-  if (locale.toLowerCase().startsWith("ro")) {
-    return {
-      removePhoto: (index: number) => `Elimină fotografia ${index}`,
-      publishChoice: "Alege publicarea",
-      publishHelp:
-        "Alege cât de vizibil vrei să fie anunțul. Poți începe gratuit.",
-      selected: "Selectat",
-    };
-  }
-
-  return {
-    removePhoto: (index: number) => `Odstrániť fotografiu ${index}`,
-    publishChoice: "Vyberte zverejnenie",
-    publishHelp:
-      "Vyberte, ako výrazne sa má inzerát zobrazovať. Začať môžete zadarmo.",
-    selected: "Vybrané",
-  };
-}
-
 export function Step5PhotosPrice({
   formData,
   updateFormData,
@@ -61,7 +41,6 @@ export function Step5PhotosPrice({
 }: Step5Props) {
   const locale = useLocale();
   const localeTag = locale;
-  const inlineCopy = getStep5InlineCopy(locale);
   const t = useTranslations("addListing");
   const tEquipment = useTranslations("equipment");
   const sectionClass =
@@ -75,6 +54,10 @@ export function Step5PhotosPrice({
           {t("photos")}
         </h2>
         <p className="text-secondary mb-4">{t("photosSubtitle")}</p>
+        <ul className="mb-4 space-y-1 rounded-xl border border-primary/10 bg-primary/5 p-3 text-xs leading-5 text-secondary">
+          <li>{t("photoQualityGuidance")}</li>
+          <li>{t("photoWatermarkGuidance")}</li>
+        </ul>
 
         {errors.photos && (
           <p className="mb-4 text-sm text-error">{errors.photos}</p>
@@ -111,7 +94,7 @@ export function Step5PhotosPrice({
           </label>
         )}
 
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {formData.photoUrls.map((url, index) => (
             <div
               key={url}
@@ -119,17 +102,17 @@ export function Step5PhotosPrice({
             >
               <Image
                 src={url}
-                alt={`Foto ${index + 1}`}
+                alt={t("vehiclePhotoAlt", { index: index + 1 })}
                 fill
                 sizes="(max-width: 768px) 33vw, 20vw"
-                className="object-cover"
+                className="object-contain bg-background-muted"
               />
               <button
                 type="button"
                 data-testid={`listing-photo-remove-${index}`}
-                aria-label={inlineCopy.removePhoto(index + 1)}
+                aria-label={t("removePhoto", { index: index + 1 })}
                 onClick={() => removePhoto(index)}
-                className="absolute top-2 right-2 size-6 rounded-full bg-error text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-error text-white shadow-sm transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
               >
                 ×
               </button>
@@ -161,6 +144,7 @@ export function Step5PhotosPrice({
                   <button
                     key={item}
                     type="button"
+                    aria-pressed={formData.equipment.includes(item)}
                     onClick={() => toggleEquipment(item)}
                     className={`rounded-full px-4 py-2 text-base font-medium transition-all active:scale-[0.98] ${
                       formData.equipment.includes(item)
@@ -210,9 +194,9 @@ export function Step5PhotosPrice({
             id="listing-publication-heading"
             className="mb-2 text-xl font-semibold text-primary"
           >
-            {inlineCopy.publishChoice}
+            {t("publishChoice")}
           </h2>
-          <p className="mb-4 text-secondary">{inlineCopy.publishHelp}</p>
+          <p className="mb-4 text-secondary">{t("publishHelp")}</p>
           <div className="grid gap-3 sm:grid-cols-3">
             {submitOptions.map((option) => {
               const isActive = selectedOperation === option.operation;
@@ -233,7 +217,7 @@ export function Step5PhotosPrice({
                     <span className="text-lg font-bold text-primary">{option.label}</span>
                     {isActive ? (
                       <span className="rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-white">
-                        {inlineCopy.selected}
+                        {t("selectedOption")}
                       </span>
                     ) : null}
                   </span>

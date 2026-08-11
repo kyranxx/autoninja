@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 
 type MaintenanceTranslations = ReturnType<typeof useTranslations>;
 
@@ -30,6 +31,7 @@ function formatUnlockError(
 
 function MaintenanceContent() {
   const t = useTranslations("maintenance");
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [isChecking, setIsChecking] = useState(false);
@@ -53,8 +55,7 @@ function MaintenanceContent() {
       });
 
       if (response.ok) {
-        // Full reload so the browser sends the newly-set maintenance cookie through proxy.
-        window.location.href = "/";
+        router.replace("/");
         return;
       }
 
@@ -84,7 +85,7 @@ function MaintenanceContent() {
       <div className="w-full max-w-md rounded-3xl border border-border bg-background-secondary p-6 shadow-sm">
         <div className="text-center">
           <div className="mx-auto inline-flex items-center gap-2 text-2xl font-bold text-primary">
-            Auto<span className="text-[var(--color-accent)]">Ninja</span>
+            Auto<span className="text-brand-accent-on-light">Ninja</span>
           </div>
           <h1 className="mt-5 text-3xl font-semibold text-primary">{t("title")}</h1>
           <p className="mt-2 text-sm text-text-secondary">
@@ -105,7 +106,7 @@ function MaintenanceContent() {
           <button
             type="submit"
             disabled={isChecking || !password.trim()}
-            className="h-11 w-full rounded-xl bg-accent text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-11 w-full rounded-xl bg-accent text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isChecking ? t("checking") : t("unlock")}
           </button>

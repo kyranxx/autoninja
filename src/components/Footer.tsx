@@ -17,6 +17,10 @@ export default function Footer({ currentYear }: { currentYear: number }) {
   const marketCode = useMarketCode();
   const pathname = usePathname();
   const isCompactAccountFooter = pathname === "/moj-ucet";
+  const showsPaymentMethods =
+    pathname === getMarketPath("/ceny", marketCode) ||
+    pathname.startsWith("/dealer") ||
+    pathname.startsWith(getMarketPath("/platba", marketCode));
   const publicContact = PUBLIC_CONTACT_BY_MARKET[marketCode];
 
   const footerLinks = {
@@ -143,28 +147,22 @@ export default function Footer({ currentYear }: { currentYear: number }) {
               <p>{t("locationLine")}</p>
             </div>
 
-            <div className="pt-1">
-              <div className="flex items-center gap-2">
-                {socialLinks.map((link) =>
-                  link.href ? (
+            {hasActiveSocialLinks ? (
+              <div className="pt-1">
+                <div className="flex items-center gap-2">
+                  {socialLinks
+                    .filter((link): link is typeof link & { href: string } => Boolean(link.href))
+                    .map((link) => (
                     <SocialLink
                       key={link.label}
                       href={link.href}
                       label={link.label}
                       iconPath={link.iconPath}
                     />
-                  ) : (
-                    <SocialLinkDisabled
-                      key={link.label}
-                      label={link.label}
-                      iconPath={link.iconPath}
-                      helperText={t("socialSoon")}
-                    />
-                  ),
-                )}
+                    ))}
+                </div>
               </div>
-              {!hasActiveSocialLinks ? <p className="mt-3 text-xs text-white/70">{t("socialSoon")}</p> : null}
-            </div>
+            ) : null}
             </div>
 
             <div className="lg:col-span-2">
@@ -223,8 +221,9 @@ export default function Footer({ currentYear }: { currentYear: number }) {
 
         <div className={`${isCompactAccountFooter ? "mt-5" : "mt-7"} flex flex-col items-center gap-4 border-t border-white/12 pt-5 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left`}>
           <p className="text-xs text-white/78">{t("copyright", { year: currentYear })}</p>
-          {!isCompactAccountFooter ? (
+          {!isCompactAccountFooter && showsPaymentMethods ? (
             <AcceptedPaymentMethods
+              ariaLabel={t("acceptedPaymentMethods")}
               className="justify-center"
               itemClassName="h-9 rounded-lg px-2 py-1.5"
               imageClassName="h-4 w-6"
@@ -305,28 +304,5 @@ function SocialLink({
         <path d={iconPath} />
       </svg>
     </a>
-  );
-}
-
-function SocialLinkDisabled({
-  label,
-  iconPath,
-  helperText,
-}: {
-  label: string;
-  iconPath: string;
-  helperText: string;
-}) {
-  return (
-    <span
-      role="img"
-      aria-label={`${label}: ${helperText}`}
-      title={`${label}: ${helperText}`}
-      className="flex size-9 hit-target items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/35"
-    >
-      <svg className="size-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path d={iconPath} />
-      </svg>
-    </span>
   );
 }

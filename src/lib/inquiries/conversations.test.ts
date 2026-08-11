@@ -1,136 +1,150 @@
 import { describe, expect, it } from "vitest";
 import {
   getInquiryDirection,
-  mapInquiriesToConversations,
-  type InquiryRow,
+  mapInquiryThreadsToConversations,
+  type InquiryConversationRow,
 } from "./conversations";
 
-describe("getInquiryDirection", () => {
-  it("marks inquiry as outgoing when current user is sender", () => {
-    const inquiry: InquiryRow = {
-      id: "inq-1",
-      sender_id: "user-a",
-      recipient_id: "seller-1",
-      message: "Mam zaujem",
-      is_read: false,
-      is_qualified: false,
-      qualified_at: null,
-      created_at: "2026-02-24T10:00:00.000Z",
-      ads: {
-        id: "ad-1",
-        brand: "Skoda",
-        model: "Octavia",
-        photos_json: null,
-        seller_id: "seller-1",
-      },
-    };
+const baseThread: InquiryConversationRow = {
+  id: "thread-1",
+  ad_id: "ad-1",
+  buyer_id: "buyer-1",
+  seller_id: "seller-1",
+  buyer_archived_at: null,
+  seller_archived_at: null,
+  is_qualified: false,
+  qualified_at: null,
+  created_at: "2026-02-24T09:00:00.000Z",
+  last_message_at: "2026-02-24T11:00:00.000Z",
+  ads: {
+    id: "ad-1",
+    brand: "Škoda",
+    model: "Octavia",
+    photos_json: ["/car-1.jpg"],
+    seller_id: "seller-1",
+    status: "active",
+  },
+  inquiries: [],
+};
 
-    expect(getInquiryDirection(inquiry, "user-a")).toBe("outgoing");
-    expect(getInquiryDirection(inquiry, "seller-1")).toBe("incoming");
+describe("getInquiryDirection", () => {
+  it("uses the signed-in user as the direction source", () => {
+    const message = { sender_id: "buyer-1" };
+
+    expect(getInquiryDirection(message, "buyer-1")).toBe("outgoing");
+    expect(getInquiryDirection(message, "seller-1")).toBe("incoming");
   });
 });
 
-describe("mapInquiriesToConversations", () => {
-  it("maps and sorts inquiries by newest first", () => {
-    const rows: InquiryRow[] = [
-      {
-        id: "inq-old",
-        sender_id: "buyer-1",
-        recipient_id: "seller-1",
-        message: "Starejsia správa",
-        is_read: true,
-        is_qualified: false,
-        qualified_at: null,
-        created_at: "2026-02-24T09:00:00.000Z",
-        ads: {
-          id: "ad-1",
-          brand: "Skoda",
-          model: "Octavia",
-          photos_json: ["/car-1.jpg"],
-          seller_id: "seller-1",
+describe("mapInquiryThreadsToConversations", () => {
+  it("groups the complete chronological history into one conversation", () => {
+    const conversations = mapInquiryThreadsToConversations(
+      [
+        {
+          ...baseThread,
+          is_qualified: true,
+          qualified_at: "2026-02-24T10:30:00.000Z",
+          inquiries: [
+            {
+              id: "message-2",
+              sender_id: "seller-1",
+              recipient_id: "buyer-1",
+              message: "Áno, je dostupné.",
+              is_read: false,
+              created_at: "2026-02-24T11:00:00.000Z",
+            },
+            {
+              id: "message-1",
+              sender_id: "buyer-1",
+              recipient_id: "seller-1",
+              message: "Je auto dostupné?",
+              is_read: false,
+              created_at: "2026-02-24T09:00:00.000Z",
+            },
+          ],
         },
-      },
+      ],
+      "seller-1",
       {
-        id: "inq-new",
-        sender_id: "buyer-2",
-        recipient_id: "seller-1",
-        message: "Nova správa",
-        is_read: false,
-        is_qualified: true,
-        qualified_at: "2026-02-24T12:00:00.000Z",
-        created_at: "2026-02-24T11:00:00.000Z",
-        ads: {
-          id: "ad-2",
-          brand: "BMW",
-          model: "320d",
-          photos_json: ["/car-2.jpg"],
-          seller_id: "seller-1",
-        },
+        "buyer-1": "Jana P",
+        "seller-1": "Auto Dom",
       },
-    ];
+    );
 
-    const conversations = mapInquiriesToConversations(rows, "seller-1", {
-      "buyer-1": "Martin Z",
-      "buyer-2": "Jana P",
-      "seller-1": "Auto Dom",
+    expect(conversations).toHaveLength(1);
+    expect(conversations[0]).toMatchObject({
+      id: "thread-1",
+      counterpartyName: "Jana P",
+      carTitle: "Škoda Octavia",
+      listingStatus: "active",
+      unread: 1,
+      lastMessage: "Áno, je dostupné.",
+      lastDirection: "outgoing",
+      isQualified: true,
+      canQualify: true,
     });
-
-    expect(conversations).toHaveLength(2);
-    expect(conversations[0].id).toBe("inq-new");
-    expect(conversations[0].direction).toBe("incoming");
-    expect(conversations[0].unread).toBe(1);
-    expect(conversations[0].carTitle).toBe("BMW 320d");
-    expect(conversations[0].counterpartyName).toBe("Jana P");
-    expect(conversations[0].adReference).toBe("ad-2");
-    expect(conversations[0].isQualified).toBe(true);
-    expect(conversations[0].canQualify).toBe(true);
-    expect(conversations[1].id).toBe("inq-old");
+    expect(conversations[0].messages.map((message) => message.id)).toEqual([
+      "message-1",
+      "message-2",
+    ]);
   });
 
-  it("uses fallback values for missing ad", () => {
-    const rows: InquiryRow[] = [
-      {
-        id: "inq-1",
-        sender_id: "buyer-1",
-        recipient_id: "seller-1",
-        message: "Ahoj",
-        is_read: false,
-        is_qualified: false,
-        qualified_at: null,
-        created_at: "2026-02-24T11:00:00.000Z",
-        ads: null,
-      },
-    ];
+  it("sorts threads by latest message and hides only the current user's archive", () => {
+    const conversations = mapInquiryThreadsToConversations(
+      [
+        {
+          ...baseThread,
+          id: "archived-for-buyer",
+          buyer_archived_at: "2026-02-24T12:00:00.000Z",
+        },
+        {
+          ...baseThread,
+          id: "visible-to-buyer",
+          ad_id: "ad-2",
+          seller_archived_at: "2026-02-24T12:00:00.000Z",
+          last_message_at: "2026-02-25T12:00:00.000Z",
+        },
+      ],
+      "buyer-1",
+    );
 
-    const conversations = mapInquiriesToConversations(rows, "seller-1");
-
-    expect(conversations[0].carTitle).toBe("Inzerát");
-    expect(conversations[0].carPhoto).toBe("/placeholder-car.jpg");
+    expect(conversations.map((conversation) => conversation.id)).toEqual([
+      "visible-to-buyer",
+    ]);
   });
 
-  it("uses localized fallback labels when provided", () => {
-    const rows: InquiryRow[] = [
+  it("uses fallbacks and disables lead qualification for a self-test thread", () => {
+    const conversations = mapInquiryThreadsToConversations(
+      [
+        {
+          ...baseThread,
+          buyer_id: "seller-1",
+          ads: null,
+          inquiries: [
+            {
+              id: "message-1",
+              sender_id: "seller-1",
+              recipient_id: "seller-1",
+              message: "Test",
+              is_read: false,
+              created_at: "2026-02-24T09:00:00.000Z",
+            },
+          ],
+        },
+      ],
+      "seller-1",
+      {},
       {
-        id: "inq-1",
-        sender_id: "buyer-1",
-        recipient_id: "seller-1",
-        message: "Buna",
-        is_read: false,
-        is_qualified: false,
-        qualified_at: null,
-        created_at: "2026-02-24T11:00:00.000Z",
-        ads: null,
+        fallbackCarTitle: "Anunț",
+        incomingLabel: "Cumpărător",
+        outgoingLabel: "Vânzător",
+        userLabel: "Tu",
       },
-    ];
-
-    const conversations = mapInquiriesToConversations(rows, "seller-1", {}, {
-      fallbackCarTitle: "Anunț",
-      incomingLabel: "Cumpărător",
-      outgoingLabel: "Vânzător",
-    });
+    );
 
     expect(conversations[0].carTitle).toBe("Anunț");
-    expect(conversations[0].counterpartyName).toBe("Cumpărător");
-    expect(conversations[0].senderName).toBe("Cumpărător");
+    expect(conversations[0].carPhoto).toBe("/placeholder-car.jpg");
+    expect(conversations[0].counterpartyName).toBe("Tu");
+    expect(conversations[0].canQualify).toBe(false);
   });
 });

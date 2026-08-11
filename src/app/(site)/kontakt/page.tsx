@@ -177,11 +177,13 @@ export default async function ContactPage() {
               </p>
             </ContactInfoCard>
 
-            <MarketplaceCard>
-              <h2 className="mb-4 font-semibold text-primary">{copy.socialTitle}</h2>
-              <div className="flex gap-3">
-                {socialLinks.map((link) =>
-                  link.href ? (
+            {hasActiveSocialLinks ? (
+              <MarketplaceCard>
+                <h2 className="mb-4 font-semibold text-primary">{copy.socialTitle}</h2>
+                <div className="flex gap-3">
+                  {socialLinks
+                    .filter((link): link is typeof link & { href: string } => Boolean(link.href))
+                    .map((link) => (
                     <a
                       key={link.label}
                       href={link.href}
@@ -194,30 +196,10 @@ export default async function ContactPage() {
                         <path d={link.iconPath} />
                       </svg>
                     </a>
-                  ) : (
-                    <span
-                      role="img"
-                      key={link.label}
-                      aria-label={`${link.label}: ${copy.socialPreparing}`}
-                      title={`${link.label}: ${copy.socialPreparing}`}
-                      className="market-icon-button size-11 text-secondary/40 opacity-60"
-                    >
-                      <svg
-                        className="size-5"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                      >
-                        <path d={link.iconPath} />
-                      </svg>
-                    </span>
-                  ),
-                )}
-              </div>
-              {!hasActiveSocialLinks ? (
-                <p className="mt-3 text-sm text-secondary">{copy.socialSoon}</p>
-              ) : null}
-            </MarketplaceCard>
+                    ))}
+                </div>
+              </MarketplaceCard>
+            ) : null}
           </div>
         </div>
       </MarketplaceContainer>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/algolia";
+import { getAdminClient, getCarsIndexName } from "@/lib/algolia";
+import { configureCarsIndex } from "@/lib/algolia/admin-config";
 import {
   createCronAdminClient,
   rejectWhenInvalidCronRequest,
@@ -21,9 +22,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const algolia = getAdminClient();
+    await configureCarsIndex(algolia, getCarsIndexName());
     const result = await processAlgoliaSyncQueue({
       supabase,
-      algolia: getAdminClient(),
+      algolia,
       batchSize: 100,
     });
 

@@ -42,6 +42,8 @@
   --color-accent-subtle: #FFF0E6;
   --color-accent-text: #F45B00;
   --color-accent-text-hover: #E85A00;
+  --color-brand-accent-on-light: #C2410C;
+  --color-brand-accent-on-dark: #FFB46A;
 
   /* Mint accent (fresh highlight tone) */
   --color-mint: #78F0B0;
@@ -53,7 +55,7 @@
   /* Status */
   --color-success: #1F6D4A;
   --color-success-subtle: #edf8f3;
-  --color-error: #d14343;
+  --color-error: #a12d2d;
   --color-error-subtle: #fdeaea;
   --color-warning: #c9922a;
   --color-warning-subtle: #fdf6e8;
@@ -515,88 +517,90 @@ h2 {
   line-height: 1.2;
 }
 
-.market-action-primary,
-.market-action-secondary,
-.market-action-account,
-.market-icon-button {
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  transition:
-    background-color var(--transition-base),
-    border-color var(--transition-base),
-    box-shadow var(--transition-base),
-    transform var(--transition-fast);
-}
+@layer components {
+  .market-action-primary,
+  .market-action-secondary,
+  .market-action-account,
+  .market-icon-button {
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    transition:
+      background-color var(--transition-base),
+      border-color var(--transition-base),
+      box-shadow var(--transition-base),
+      transform var(--transition-fast);
+  }
 
-.market-action-primary,
-.market-action-secondary,
-.market-action-account {
-  display: inline-flex;
-  gap: 0.5rem;
-  border-radius: 8px;
-  padding: 0.72rem 1rem;
-  font-weight: 800;
-  line-height: 1.2;
-}
+  .market-action-primary,
+  .market-action-secondary,
+  .market-action-account {
+    display: inline-flex;
+    gap: 0.5rem;
+    border-radius: 8px;
+    padding: 0.72rem 1rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
 
-.market-action-primary {
-  border: 1px solid var(--color-accent);
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  box-shadow: none;
-}
+  .market-action-primary {
+    border: 1px solid var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-accent-foreground);
+    box-shadow: none;
+  }
 
-.market-action-primary:hover {
-  background: var(--color-accent-hover);
-  border-color: var(--color-accent-hover);
-  box-shadow: none;
-}
+  .market-action-primary:hover {
+    background: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+    box-shadow: none;
+  }
 
-.market-action-secondary {
-  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
-  background: #ffffff;
-  color: var(--color-primary);
-}
+  .market-action-secondary {
+    border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
+    background: #ffffff;
+    color: var(--color-primary);
+  }
 
-.market-action-secondary:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
-  background: color-mix(in srgb, var(--color-primary) 4%, #ffffff);
-}
+  .market-action-secondary:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary) 4%, #ffffff);
+  }
 
-.market-action-account {
-  border: 1px solid var(--color-primary);
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  box-shadow: none;
-}
+  .market-action-account {
+    border: 1px solid var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+    box-shadow: none;
+  }
 
-.market-action-account:hover {
-  border-color: var(--color-primary-hover);
-  background: var(--color-primary-hover);
-  box-shadow: none;
-}
+  .market-action-account:hover {
+    border-color: var(--color-primary-hover);
+    background: var(--color-primary-hover);
+    box-shadow: none;
+  }
 
-.market-action-account:disabled,
-.market-action-account:disabled:hover {
-  border-color: var(--color-border);
-  background: var(--color-background-muted);
-  color: var(--color-text-secondary);
-  box-shadow: none;
-}
+  .market-action-account:disabled,
+  .market-action-account:disabled:hover {
+    border-color: var(--color-border);
+    background: var(--color-background-muted);
+    color: var(--color-text-secondary);
+    box-shadow: none;
+  }
 
-.market-icon-button {
-  display: inline-flex;
-  min-width: 44px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--color-border));
-  background: #ffffff;
-  color: var(--color-primary);
-}
+  .market-icon-button {
+    display: inline-flex;
+    min-width: 44px;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--color-border));
+    background: #ffffff;
+    color: var(--color-primary);
+  }
 
-.market-icon-button:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 36%, var(--color-border));
-  background: color-mix(in srgb, var(--color-primary) 5%, #ffffff);
+  .market-icon-button:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 36%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary) 5%, #ffffff);
+  }
 }
 
 .market-field {

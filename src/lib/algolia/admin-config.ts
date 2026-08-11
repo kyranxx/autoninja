@@ -1,3 +1,4 @@
+import type { Algoliasearch } from "algoliasearch";
 import type { SearchSortOption } from "./sort-indices";
 
 const REPLICA_SORT_SUFFIXES: Record<Exclude<SearchSortOption, "newest">, string> = {
@@ -23,9 +24,13 @@ export function getCarsIndexSettings(baseIndexName: string) {
       "searchable(brand)",
       "searchable(model)",
       "searchable(location_city)",
-      "filterOnly(fuel)",
-      "filterOnly(transmission)",
-      "filterOnly(body_style)",
+      "fuel",
+      "transmission",
+      "body_style",
+      "price_eur",
+      "mileage_km",
+      "year",
+      "power_kw",
       "filterOnly(market_code)",
       "filterOnly(has_service_book)",
       "filterOnly(not_crashed)",
@@ -95,4 +100,29 @@ export function getCarsSynonymBatch() {
       },
     ],
   };
+}
+
+export async function configureCarsIndex(
+  algolia: Pick<Algoliasearch, "customPut" | "customPost">,
+  baseIndexName: string,
+): Promise<void> {
+  await algolia.customPut({
+    path: `1/indexes/${encodeURIComponent(baseIndexName)}/settings`,
+    body: getCarsIndexSettings(baseIndexName),
+  });
+
+  for (const replica of getCarsReplicaSettings()) {
+    await algolia.customPut({
+      path: `1/indexes/${encodeURIComponent(`${baseIndexName}${replica.suffix}`)}/settings`,
+      body: { ranking: replica.ranking },
+    });
+  }
+
+  await algolia.customPost({
+    path: `1/indexes/${encodeURIComponent(baseIndexName)}/synonyms/batch`,
+    body: getCarsSynonymBatch().requests.map((request) => request.body) as unknown as Record<
+      string,
+      unknown
+    >,
+  });
 }

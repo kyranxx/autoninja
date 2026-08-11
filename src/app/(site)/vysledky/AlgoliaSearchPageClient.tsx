@@ -61,6 +61,13 @@ import { getMarketPath } from "@/lib/routes";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { Button } from "@/components/ui/shadcn/button";
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/shadcn/dialog";
+import {
   Bookmark as BookmarkIcon,
   ChevronDown as ChevronDownIcon,
   Filter as FilterIcon,
@@ -279,7 +286,6 @@ function SearchUnavailable() {
   return (
     <main id="main-content" className="min-h-screen pb-16 pt-20 sm:pt-24">
       <div className="container-main">
-        <h1 className="sr-only">{t("srHeading")}</h1>
         <div className="max-w-2xl rounded-2xl border border-border-subtle bg-background-secondary p-6 shadow-sm">
           <h2 className="mb-2 text-xl font-semibold text-text-primary">
             {t("searchUnavailableTitle")}
@@ -426,73 +432,57 @@ function MobileResultsControls({
 function MobileFilterSheet({
   isOpen,
   onClose,
+  queryString,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  queryString: string;
 }) {
   const t = useTranslations("searchPage");
   const tFilters = useTranslations("filters");
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <div className="fixed inset-0 z-[140] lg:hidden" role="presentation">
-      <button
-        type="button"
-        aria-label={tFilters("close")}
-        className="absolute inset-0 bg-black/45"
-        onClick={onClose}
-      />
-      <section
+    <Dialog
+      open={isOpen}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <DialogContent
         id="mobile-filter-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="mobile-filter-title"
-        className="absolute inset-x-0 bottom-0 max-h-[90svh] overflow-hidden rounded-t-xl border border-border-subtle bg-background shadow-2xl"
+        showCloseButton={false}
+        className="inset-x-0 bottom-0 left-0 top-auto max-h-[90svh] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-b-none rounded-t-xl border-border-subtle p-0 sm:max-w-none lg:hidden"
       >
         <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2.5">
-          <h2
-            id="mobile-filter-title"
-            className="!text-2xl font-semibold text-text-primary"
-          >
+          <DialogTitle className="!text-2xl font-semibold text-text-primary">
             {t("filters")}
-          </h2>
-          <button
-            type="button"
-            aria-label={tFilters("close")}
-            onClick={onClose}
-            className="market-icon-button flex size-10 items-center justify-center text-text-secondary"
-          >
-            <XIcon className="size-4" />
-          </button>
+          </DialogTitle>
+          <DialogDescription className="sr-only">{t("subtitle")}</DialogDescription>
+          <DialogClose asChild>
+            <button
+              type="button"
+              aria-label={tFilters("close")}
+              className="market-icon-button flex size-10 items-center justify-center text-text-secondary"
+            >
+              <XIcon className="size-4" />
+            </button>
+          </DialogClose>
         </div>
         <div className="max-h-[calc(90svh-8.5rem)] overflow-y-auto px-2.5 py-2.5">
           <FilterSidebar idScope="mobile-filters" />
         </div>
-        <div className="border-t border-border-subtle bg-background px-2.5 py-2.5">
-          <Button type="button" className="h-11 w-full" onClick={onClose}>
-            {tFilters("showResults")}
-          </Button>
+        <div className="grid grid-cols-2 gap-2 border-t border-border-subtle bg-background px-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5">
+          <div className="[&_button]:h-11 [&_button]:w-full">
+            <SaveSearchButton queryString={queryString} />
+          </div>
+          <DialogClose asChild>
+            <Button type="button" className="h-11 w-full">
+              {tFilters("showResults")}
+            </Button>
+          </DialogClose>
         </div>
-      </section>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -502,7 +492,7 @@ function ResultsToolbarSummary() {
 
   return (
     <div className="min-w-0">
-      <p className="market-kicker">{t("results")}</p>
+      <h2 className="market-kicker">{t("results")}</h2>
       <p className="mt-0.5 text-sm font-semibold text-text-primary">
         {t(getVehicleCountMessageKey(nbHits), { count: nbHits })}
       </p>
@@ -554,6 +544,15 @@ function AlgoliaSearchContent() {
   useEffect(() => {
     lastSyncedQueryRef.current = routeQuery;
   }, [routeQuery]);
+
+  useEffect(() => {
+    if (!isResultsRoute) return;
+    const query = searchParamsSnapshot ? `?${searchParamsSnapshot}` : "";
+    window.sessionStorage.setItem(
+      "autoninja:last-results-url",
+      `${pathname}${query}`,
+    );
+  }, [isResultsRoute, pathname, searchParamsSnapshot]);
 
   useEffect(() => {
     return () => {
@@ -626,7 +625,7 @@ function AlgoliaSearchContent() {
 
       <main
         id="main-content"
-        className="market-results-page min-h-screen bg-background-muted pb-12 lg:pb-16"
+        className="market-results-page bg-background-muted pb-12 lg:pb-16"
       >
         <div className="border-b border-border-subtle bg-background-secondary">
           <div className="container-main flex items-center gap-2 !px-1.5 py-2 sm:!px-6 sm:py-3 lg:!px-8 xl:max-w-[100rem]">
@@ -654,11 +653,12 @@ function AlgoliaSearchContent() {
           <MobileFilterSheet
             isOpen={showMobileFilters}
             onClose={() => setShowMobileFilters(false)}
+            queryString={routeQuery}
           />
 
           <div className="grid items-start gap-4 lg:grid-cols-[292px_minmax(0,1fr)] lg:gap-5">
             <aside className="order-1 hidden lg:block lg:self-start">
-              <div className="sticky top-4 overflow-hidden rounded-xl border border-border-subtle bg-background-secondary shadow-sm">
+              <div className="sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-border-subtle bg-background-secondary shadow-sm">
                 <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3 lg:shrink-0">
                   <h2 className="!text-base font-semibold leading-none tracking-tight text-text-primary">
                     {t("filters")}

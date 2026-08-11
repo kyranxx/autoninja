@@ -9,7 +9,10 @@ export default function TopBannerClient({
   freeListingCta: string;
 }) {
   return (
-    <div className="print:hidden relative z-[140] hidden w-full bg-primary text-primary-foreground md:block">
+    <aside
+      aria-label={freeListingCta}
+      className="print:hidden relative z-[140] hidden w-full bg-primary text-primary-foreground md:block"
+    >
       <div className="container-main flex min-h-9 items-center justify-center py-1 text-xs">
         <Link
           href={CREATE_LISTING_ROUTE}
@@ -18,6 +21,6 @@ export default function TopBannerClient({
           {freeListingCta} <span aria-hidden="true">→</span>
         </Link>
       </div>
-    </div>
+    </aside>
   );
 }

@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Custom ignores:
     ".vercel/**",
+    ".tmp/**",
+    "tmp/**",
+    "output/**",
     "scripts/**",
   ]),
   // Custom rules

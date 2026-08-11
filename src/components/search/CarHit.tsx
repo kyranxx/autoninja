@@ -63,6 +63,16 @@ export function CarHit({
 
   const isList = viewMode === "list";
   const galleryPhotos = getCarHitGalleryPhotos(hit);
+  const listingHref = getMarketPath(
+    buildAdPath({
+      id: hit.objectID,
+      brand: hit.brand,
+      model: hit.model,
+      year: hit.year,
+    }),
+    marketCode,
+  );
+  const listingLabel = `${hit.brand} ${hit.model}`;
   const transmissionLabel = hit.transmission
     ? tTransmission(
         hit.transmission.toLowerCase() as Parameters<typeof tTransmission>[0],
@@ -216,49 +226,42 @@ export function CarHit({
   };
 
   return (
-    <SafeLink
-      href={getMarketPath(
-        buildAdPath({
-          id: hit.objectID,
-          brand: hit.brand,
-          model: hit.model,
-          year: hit.year,
-        }),
-        marketCode,
+    <article
+      className={cn(
+        "market-card group relative flex h-full overflow-hidden rounded-xl border border-border-subtle bg-white transition-[box-shadow,border-color,transform] duration-200",
+        "hover:-translate-y-0.5 hover:border-accent/45 hover:shadow-md",
+        hit.is_highlighted &&
+          "border-accent/45 bg-accent-subtle ring-1 ring-accent/20",
+        isList ? "flex-col sm:flex-row" : "flex-col",
       )}
-      className="group block h-full"
     >
-      <article
+      <div
         className={cn(
-          "market-card relative flex h-full overflow-hidden rounded-xl border border-border-subtle bg-white transition-[box-shadow,border-color,transform] duration-200",
-          "group-hover:-translate-y-0.5 group-hover:border-accent/45 group-hover:shadow-md",
-          hit.is_highlighted &&
-            "border-accent/45 bg-accent-subtle ring-1 ring-accent/20",
-          isList ? "flex-row" : "flex-col",
+          "relative overflow-hidden bg-background-muted",
+          isList
+            ? "aspect-[16/10] w-full shrink-0 sm:aspect-[4/3] sm:w-[40%] md:min-h-[280px] md:w-[42%] md:max-w-[430px] md:aspect-auto"
+            : "aspect-[16/10] w-full shrink-0",
         )}
-      >
-        <div
-          className={cn(
-            "relative overflow-hidden bg-background-muted",
-            isList
-              ? "aspect-[4/3] w-[40%] shrink-0 md:min-h-[280px] md:w-[42%] md:max-w-[430px] md:aspect-auto"
-              : "aspect-[16/10] w-full shrink-0",
-          )}
-          onPointerDown={handleGalleryPointerDown}
-          onPointerMove={handleGalleryPointerMove}
-          onPointerUp={handleGalleryPointerUp}
-          onPointerCancel={(event) => clearGalleryGesture(event)}
-          onClickCapture={(event) => {
-            if (!galleryPreventClickRef.current) {
-              return;
-            }
+        onPointerDown={handleGalleryPointerDown}
+        onPointerMove={handleGalleryPointerMove}
+        onPointerUp={handleGalleryPointerUp}
+        onPointerCancel={(event) => clearGalleryGesture(event)}
+        onClickCapture={(event) => {
+          if (!galleryPreventClickRef.current) {
+            return;
+          }
 
-            stopCardNavigation(event);
-            galleryPreventClickRef.current = false;
-          }}
-          style={{
-            touchAction: galleryPhotos.length > 1 ? "pan-y pinch-zoom" : "auto",
-          }}
+          stopCardNavigation(event);
+          galleryPreventClickRef.current = false;
+        }}
+        style={{
+          touchAction: galleryPhotos.length > 1 ? "pan-y pinch-zoom" : "auto",
+        }}
+      >
+        <SafeLink
+          href={listingHref}
+          aria-label={listingLabel}
+          className="block size-full focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
         >
           <div
             className="flex h-full min-h-full w-full"
@@ -278,7 +281,7 @@ export function CarHit({
                 {
                   width: 960,
                   height: 600,
-                  fit: "cover",
+                  fit: "contain",
                   quality: 88,
                   format: "auto",
                 },
@@ -295,10 +298,10 @@ export function CarHit({
                     fill
                     fetchPriority={shouldPrioritizeImage ? "high" : undefined}
                     loading={shouldLoadEagerly ? "eager" : "lazy"}
-                    className="object-cover"
+                    className="object-contain"
                     sizes={
                       isList
-                        ? "(max-width: 767px) 40vw, (max-width: 1280px) 42vw, 430px"
+                        ? "(max-width: 639px) 100vw, (max-width: 767px) 40vw, (max-width: 1280px) 42vw, 430px"
                         : "(max-width: 639px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     }
                   />
@@ -306,8 +309,9 @@ export function CarHit({
               );
             })}
           </div>
+        </SafeLink>
 
-          <div className="absolute left-2 right-2 top-2 z-10 flex items-start justify-between">
+        <div className="absolute left-2 right-2 top-2 z-10 flex items-start justify-between">
             <div className="flex flex-wrap gap-1.5">
               {hit.is_top_ad ? (
                 <Badge className="border border-accent bg-accent px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-[var(--color-accent-foreground)] shadow-md ring-0">
@@ -319,22 +323,27 @@ export function CarHit({
                 </Badge>
               ) : null}
             </div>
-          </div>
-
-          {galleryPhotos.length > 1 ? (
-            <CarHitGalleryControls
-              photos={galleryPhotos}
-              activePhotoIndex={activePhotoIndex}
-              onCyclePhoto={cyclePhoto}
-              onSelectPhoto={setActivePhotoIndex}
-              onStopCardNavigation={stopCardNavigation}
-              previousPhotoLabel={tCar("previousPhoto")}
-              nextPhotoLabel={tCar("nextPhoto")}
-              getShowPhotoLabel={(index) => tCar("showPhoto", { index })}
-            />
-          ) : null}
         </div>
 
+        {galleryPhotos.length > 1 ? (
+          <CarHitGalleryControls
+            photos={galleryPhotos}
+            activePhotoIndex={activePhotoIndex}
+            onCyclePhoto={cyclePhoto}
+            onSelectPhoto={setActivePhotoIndex}
+            onStopCardNavigation={stopCardNavigation}
+            previousPhotoLabel={tCar("previousPhoto")}
+            nextPhotoLabel={tCar("nextPhoto")}
+            getShowPhotoLabel={(index) => tCar("showPhoto", { index })}
+          />
+        ) : null}
+      </div>
+
+      <SafeLink
+        href={listingHref}
+        aria-label={listingLabel}
+        className="flex min-w-0 flex-1 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
+      >
         <CarHitDetails
           hit={hit}
           isList={isList}
@@ -345,8 +354,8 @@ export function CarHit({
           vatDeductibleLabel={tCar("vatDeductible")}
           localeTag={localeTag}
         />
-      </article>
-    </SafeLink>
+      </SafeLink>
+    </article>
   );
 }
 

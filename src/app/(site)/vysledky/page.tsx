@@ -89,10 +89,14 @@ export default async function SearchPage({
             marketCode: copyMarketCode,
           })}
         />
-        <h1 className="sr-only">{tSearchPage("srHeading")}</h1>
-        <div className="container-main pt-3 sm:pt-4 lg:pt-6">
-          <BreadcrumbTrail items={breadcrumbItems} className="mb-0" />
-        </div>
+        <section aria-labelledby="search-results-heading">
+          <h1 id="search-results-heading" className="sr-only">
+            {tSearchPage("srHeading")}
+          </h1>
+          <div className="container-main pt-3 sm:pt-4 lg:pt-6">
+            <BreadcrumbTrail items={breadcrumbItems} className="mb-0" />
+          </div>
+        </section>
         <AlgoliaSearchPageClient />
         <SearchSeoLinks />
       </div>

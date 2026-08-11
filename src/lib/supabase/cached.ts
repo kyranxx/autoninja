@@ -17,6 +17,8 @@ import type { MarketCode } from "@/config/markets";
 // Types for featured cars
 interface FeaturedCarData {
   id: string;
+  brand?: string;
+  model?: string;
   year?: number;
   price_eur?: number;
   mileage_km?: number;
@@ -56,6 +58,8 @@ async function fetchFeaturedCarsUncached(marketCode: MarketCode): Promise<Featur
       .select(
         `
         id,
+        brand,
+        model,
         year,
         price_eur,
         mileage_km,
@@ -82,8 +86,8 @@ async function fetchFeaturedCarsUncached(marketCode: MarketCode): Promise<Featur
       (data || []) as unknown as FeaturedCarData[]
     ).map((ad) => ({
       id: ad.id,
-      brand: ad.brands?.name || "Neznáma",
-      model: ad.models?.name || "Model",
+      brand: ad.brands?.name || ad.brand || "Neznáma",
+      model: ad.models?.name || ad.model || "Model",
       year: ad.year || 0,
       mileage: ad.mileage_km || 0,
       price: ad.price_eur || 0,

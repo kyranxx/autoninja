@@ -74,8 +74,8 @@ export const MARKET_DEFINITIONS = [
     },
     contact: {
       email: "info@autoninja.sk",
-      phoneDisplay: "+421 900 123 456",
-      phoneHref: "+421900123456",
+      phoneDisplay: null,
+      phoneHref: null,
       postalAddressLines: [
         "Karpatské námestie 10A",
         "831 06 Bratislava - mestská časť Rača",

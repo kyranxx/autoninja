@@ -21,17 +21,19 @@ const PAYMENT_METHODS = [
 ] as const;
 
 export function AcceptedPaymentMethods({
+  ariaLabel,
   className,
   itemClassName,
   imageClassName,
 }: {
+  ariaLabel: string;
   className?: string;
   itemClassName?: string;
   imageClassName?: string;
 }) {
   return (
     <ul
-      aria-label="Accepted payment methods"
+      aria-label={ariaLabel}
       className={cn("flex flex-wrap items-center gap-2", className)}
     >
       {PAYMENT_METHODS.map((paymentMethod) => (

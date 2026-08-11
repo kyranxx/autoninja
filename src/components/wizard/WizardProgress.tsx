@@ -8,15 +8,7 @@ interface WizardProgressProps {
 }
 
 function StepIcon({ stepId }: { stepId: number }) {
-  const glyphMap: Record<number, string> = {
-    1: "KAT",
-    2: "VOZ",
-    3: "TECH",
-    4: "INFO",
-    5: "FOTO",
-  };
-
-  return <span className="text-[10px] font-bold">{glyphMap[stepId] || "KROK"}</span>;
+  return <span aria-hidden="true" className="text-sm font-bold">{stepId}</span>;
 }
 
 export function WizardProgress({
@@ -27,21 +19,25 @@ export function WizardProgress({
   const t = useTranslations("addListing");
   const totalSteps = steps.length;
   const normalizedStep = Math.min(Math.max(currentStep, 1), totalSteps || 1);
-  const completedSteps = Math.max(normalizedStep - 1, 0);
   const progressPercent =
-    totalSteps > 1 ? Math.round((completedSteps / (totalSteps - 1)) * 100) : 100;
+    totalSteps > 0 ? Math.round((normalizedStep / totalSteps) * 100) : 100;
   const activeStep = steps.find((step) => step.id === normalizedStep);
 
   return (
     <div className="mb-8">
       <div className="mb-4 rounded-xl border border-border-subtle bg-background-secondary p-3">
         <div className="flex items-center justify-between text-xs font-semibold text-text-secondary">
-          <span>
-            Krok {normalizedStep} z {totalSteps}
-          </span>
+          <span>{t("stepProgress", { current: normalizedStep, total: totalSteps })}</span>
           <span>{progressPercent}%</span>
         </div>
-        <div className="mt-2 h-2 rounded-full bg-surface">
+        <div
+          className="mt-2 h-2 rounded-full bg-surface"
+          role="progressbar"
+          aria-label={t("stepProgress", { current: normalizedStep, total: totalSteps })}
+          aria-valuemin={1}
+          aria-valuemax={totalSteps}
+          aria-valuenow={normalizedStep}
+        >
           <div
             className="h-2 rounded-full bg-accent transition-[width] duration-300"
             style={{ width: `${progressPercent}%` }}
@@ -49,7 +45,7 @@ export function WizardProgress({
         </div>
         {activeStep ? (
           <p className="mt-2 text-xs text-text-secondary">
-            Aktuálne: <span className="font-semibold text-text-primary">{t(activeStep.nameKey)}</span>
+            {t("currentStep")}: <span className="font-semibold text-text-primary">{t(activeStep.nameKey)}</span>
           </p>
         ) : null}
       </div>
@@ -60,13 +56,15 @@ export function WizardProgress({
             <div className="relative flex w-full items-center">
               {index > 0 && (
                 <div
+                  aria-hidden="true"
                   className={`absolute left-0 right-1/2 h-0.5 ${
-                    currentStep > step.id ? "bg-accent" : "bg-border"
+                    currentStep >= step.id ? "bg-accent" : "bg-border"
                   }`}
                 />
               )}
               {index < steps.length - 1 && (
                 <div
+                  aria-hidden="true"
                   className={`absolute left-1/2 right-0 h-0.5 ${
                     currentStep > step.id ? "bg-accent" : "bg-border"
                   }`}
@@ -75,6 +73,8 @@ export function WizardProgress({
 
               <button
                 type="button"
+                aria-label={t(step.nameKey)}
+                aria-current={currentStep === step.id ? "step" : undefined}
                 onClick={() => {
                   if (step.id < currentStep) onStepClick(step.id);
                 }}
@@ -88,7 +88,7 @@ export function WizardProgress({
                 }`}
               >
                 {currentStep > step.id ? (
-                  <CheckIcon className="size-5" />
+                  <CheckIcon aria-hidden="true" className="size-5" />
                 ) : (
                   <StepIcon stepId={step.id} />
                 )}

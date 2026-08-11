@@ -129,4 +129,23 @@ describe("Footer", () => {
     expect(document.querySelector("[data-full-footer-desktop]")).toBeNull();
     expect(screen.getAllByRole("link", { name: "AutoNinja.sk" })).toHaveLength(1);
   });
+
+  it("does not show inactive social profiles or payment methods on general pages", () => {
+    useLocaleMock.mockReturnValue("sk");
+    usePathnameMock.mockReturnValue("/cookies");
+
+    renderFooter();
+
+    expect(screen.queryByLabelText("Facebook")).toBeNull();
+    expect(screen.queryByRole("list", { name: "acceptedPaymentMethods" })).toBeNull();
+  });
+
+  it("shows localized payment methods on the pricing page", () => {
+    useLocaleMock.mockReturnValue("sk");
+    usePathnameMock.mockReturnValue("/ceny");
+
+    renderFooter();
+
+    expect(screen.getByRole("list", { name: "acceptedPaymentMethods" })).toBeVisible();
+  });
 });

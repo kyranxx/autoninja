@@ -30,25 +30,25 @@ export default function SearchSeoLinks() {
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
-            href="/skoda/octavia"
+            href={getMarketPath("/skoda/octavia", marketCode)}
             className="rounded-full border border-border px-3 py-1.5 text-sm text-text-secondary hover:border-accent hover:text-accent"
           >
-            Skoda Octavia
+            Škoda Octavia
           </Link>
           <Link
-            href="/volkswagen/golf"
+            href={getMarketPath("/volkswagen/golf", marketCode)}
             className="rounded-full border border-border px-3 py-1.5 text-sm text-text-secondary hover:border-accent hover:text-accent"
           >
             Volkswagen Golf
           </Link>
           <Link
-            href="/bmw/3-series"
+            href={getMarketPath("/bmw/3-series", marketCode)}
             className="rounded-full border border-border px-3 py-1.5 text-sm text-text-secondary hover:border-accent hover:text-accent"
           >
             BMW 3 Series
           </Link>
           <Link
-            href="/audi/a4"
+            href={getMarketPath("/audi/a4", marketCode)}
             className="rounded-full border border-border px-3 py-1.5 text-sm text-text-secondary hover:border-accent hover:text-accent"
           >
             Audi A4

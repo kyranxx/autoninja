@@ -3,6 +3,7 @@ import { isMarketCode, type MarketCode } from "@/config/markets";
 export interface CarData {
   id: string;
   market_code?: MarketCode;
+  dealer_id?: string | null;
   brand: string;
   model: string;
   generation?: string;
@@ -88,6 +89,7 @@ export function mapCarQueryRowToCarData(row: CarQueryRow): CarData {
   return {
     id: row.id || "",
     market_code: isMarketCode(row.market_code) ? row.market_code : undefined,
+    dealer_id: typeof row.dealer_id === "string" ? row.dealer_id : null,
     brand: row.brand || "",
     model: row.model || "",
     generation: row.generation,

@@ -5,7 +5,10 @@ import {
   type Dispatch,
   type FormEvent,
   type KeyboardEvent,
+  type MouseEvent,
+  type RefObject,
   type SetStateAction,
+  type TouchEvent,
   useCallback,
   useEffect,
   useRef,
@@ -15,6 +18,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -27,6 +31,7 @@ import { useAuthOptional } from "@/context/AuthContext";
 import { cn } from "@/utils/cn";
 import { optimizeCloudflareImage } from "@/lib/image-optimizer";
 import { buildAdPath } from "@/lib/cars/ad-path";
+import { getMarketPath } from "@/lib/routes";
 import { getListingFallbackGallery } from "@/lib/cars/fallback-images";
 import { trackAnalyticsEvent } from "@/lib/analytics/client";
 import { startViewTransition } from "@/utils/view-transitions";
@@ -138,12 +143,15 @@ type CarDetailText = {
     description: string;
     equipment: string;
     location: string;
+    noDescription: string;
+    approximateLocation: string;
   };
   gallery: {
     previous: string;
     next: string;
     showPhoto: (index: number) => string;
     photoAlt: (brand: string, model: string, index: number) => string;
+    expand: string;
   };
   heading: {
     saveAria: string;
@@ -173,6 +181,8 @@ type CarDetailText = {
     enterHint: string;
     sendInquiry: string;
     sending: string;
+    callSeller: string;
+    safetyNote: string;
   };
   seller: {
     title: string;
@@ -190,6 +200,7 @@ type CarDetailText = {
     description: string;
   };
   views: (count: string) => string;
+  backToResults: string;
 };
 
 type ResolvedCarDetailCopy = {
@@ -273,12 +284,15 @@ const CAR_DETAIL_TEXT: Record<MarketCode, CarDetailText> = {
       description: "Popis vozidla",
       equipment: "Výbava",
       location: "Poloha",
+      noDescription: "Predajca k inzerátu nepridal podrobný popis.",
+      approximateLocation: "Mapa zobrazuje približnú polohu, nie presnú adresu predajcu.",
     },
     gallery: {
       previous: "Predchádzajúca fotografia",
       next: "Ďalšia fotografia",
       showPhoto: (index) => `Zobraziť fotografiu ${index}`,
       photoAlt: (brand, model, index) => `${brand} ${model} - fotografia ${index}`,
+      expand: "Zväčšiť fotografiu",
     },
     heading: {
       saveAria: "Uložiť do obľúbených",
@@ -301,14 +315,16 @@ const CAR_DETAIL_TEXT: Record<MarketCode, CarDetailText> = {
       report: "Nahlásiť inzerát",
       tip: "Tip: krátka vecná správa zvyšuje šancu na rýchlu odpoveď.",
       inbox: "Odpoveď nájdete v Môj účet - Správy.",
-      antiSpam: "Anti-spam ochrana: max 3 správy na toto vozidlo za 10 minút.",
+      antiSpam: "Prvý dopyt chráni captcha; ďalšie odpovede chráni prihlásenie a limity proti zneužitiu.",
       sentTitle: "Správa odoslaná",
       sentDescription: "Predajca vám čoskoro odpovie.",
       openMessages: "Otvoriť správy",
       placeholder: "Mám záujem o toto auto...",
-      enterHint: "Enter odošle správu, Shift+Enter vloží nový riadok.",
+      enterHint: "Ctrl alebo Cmd + Enter odošle správu. Enter vloží nový riadok.",
       sendInquiry: "Odoslať dopyt",
       sending: "Odosielanie...",
+      callSeller: "Zavolať predajcovi",
+      safetyNote: "Pred obhliadkou neposielajte zálohu a overte si vozidlo aj totožnosť predajcu.",
     },
     seller: {
       title: "Predajca",
@@ -327,6 +343,7 @@ const CAR_DETAIL_TEXT: Record<MarketCode, CarDetailText> = {
         "Tento inzerát zatiaľ nie je zverejnený. Kontaktné akcie sú v náhľade vypnuté.",
     },
     views: (count) => `${count} zobrazení`,
+    backToResults: "Späť na výsledky",
   },
   RO: {
     loadError: "Anunțul nu a putut fi încărcat",
@@ -381,12 +398,15 @@ const CAR_DETAIL_TEXT: Record<MarketCode, CarDetailText> = {
       description: "Descrierea mașinii",
       equipment: "Dotări",
       location: "Locație",
+      noDescription: "Vânzătorul nu a adăugat o descriere detaliată.",
+      approximateLocation: "Harta arată o zonă aproximativă, nu adresa exactă a vânzătorului.",
     },
     gallery: {
       previous: "Fotografia anterioară",
       next: "Fotografia următoare",
       showPhoto: (index) => `Afișează fotografia ${index}`,
       photoAlt: (brand, model, index) => `${brand} ${model} - fotografia ${index}`,
+      expand: "Mărește fotografia",
     },
     heading: {
       saveAria: "Salvează la favorite",
@@ -410,14 +430,16 @@ const CAR_DETAIL_TEXT: Record<MarketCode, CarDetailText> = {
       tip: "Sfat: un mesaj scurt și concret crește șansa unui răspuns rapid.",
       inbox: "Răspunsul îl găsești în Contul meu - Mesaje.",
       antiSpam:
-        "Protecție anti-spam: maximum 3 mesaje pentru această mașină în 10 minute.",
+        "Prima cerere este protejată prin captcha; răspunsurile sunt protejate prin autentificare și limite anti-abuz.",
       sentTitle: "Mesaj trimis",
       sentDescription: "Vânzătorul îți va răspunde în curând.",
       openMessages: "Deschide mesajele",
       placeholder: "Sunt interesat de această mașină...",
-      enterHint: "Enter trimite mesajul, Shift+Enter adaugă un rând nou.",
+      enterHint: "Ctrl sau Cmd + Enter trimite mesajul. Enter adaugă un rând nou.",
       sendInquiry: "Trimite cererea",
       sending: "Se trimite...",
+      callSeller: "Sună vânzătorul",
+      safetyNote: "Nu trimite avans înainte de vizionare și verifică mașina și identitatea vânzătorului.",
     },
     seller: {
       title: "Vânzător",
@@ -436,6 +458,7 @@ const CAR_DETAIL_TEXT: Record<MarketCode, CarDetailText> = {
         "Acest anunț nu este încă public. Acțiunile de contact sunt dezactivate în previzualizare.",
     },
     views: (count) => `${count} vizualizări`,
+    backToResults: "Înapoi la rezultate",
   },
 };
 
@@ -779,7 +802,6 @@ export default function CarDetailClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           adId: car.id,
-          recipientId: car.seller.id,
           message: state.contactMessage,
           captchaToken: contactCaptchaToken,
         }),
@@ -920,7 +942,7 @@ export default function CarDetailClient({
   };
 
   const handleMessageKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
       if (!state.isSendingMessage && state.contactMessage.trim()) {
         void submitMessage();
@@ -1051,8 +1073,37 @@ function CarDetailView({
   submitReport: () => Promise<void>;
   setReportCaptchaToken: (token: string | null) => void;
 }) {
+  const router = useRouter();
+  const contactActionsRef = useRef<HTMLDivElement>(null);
+  const [areContactActionsVisible, setAreContactActionsVisible] = useState(true);
+  const defaultResultsPath = getMarketPath("/vysledky", copy.marketCode);
+
+  useEffect(() => {
+    const contactActions = contactActionsRef.current;
+    if (!contactActions || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setAreContactActionsVisible(entry.isIntersecting),
+      { threshold: 0.05 },
+    );
+
+    observer.observe(contactActions);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleResultsReturn = (event: MouseEvent<HTMLAnchorElement>) => {
+    const storedPath = window.sessionStorage.getItem("autoninja:last-results-url");
+    if (
+      storedPath === defaultResultsPath ||
+      storedPath?.startsWith(`${defaultResultsPath}?`)
+    ) {
+      event.preventDefault();
+      router.push(storedPath);
+    }
+  };
+
   return (
-    <main className="pt-4 pb-16 sm:pt-6 sm:pb-18">
+    <main className="pb-28 pt-4 sm:pt-6 lg:pb-16">
       <div className="container-main">
         {isAdminPreview ? (
           <div
@@ -1065,9 +1116,17 @@ function CarDetailView({
             <p className="mt-1">{copy.text.adminPreview.description}</p>
           </div>
         ) : null}
+        <Link
+          href={defaultResultsPath}
+          onClick={handleResultsReturn}
+          className="mb-2 inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <ChevronLeftIcon className="size-4" aria-hidden="true" />
+          {copy.text.backToResults}
+        </Link>
         <BreadcrumbTrail items={breadcrumbItems} className="mb-3" />
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3 lg:gap-8">
           <div className="space-y-7 lg:col-span-2 sm:space-y-8">
             <CarGallery
               car={car}
@@ -1088,10 +1147,64 @@ function CarDetailView({
               onShare={handleShareLink}
               onCopyLink={handleCopyLink}
             />
+          </div>
+
+          <aside className="space-y-3 lg:sticky lg:top-24 lg:col-start-3 lg:row-start-1 lg:row-span-2 lg:self-start">
+            <div>
+              <ContactSellerCard
+                car={car}
+                copy={copy}
+                isAdminPreview={isAdminPreview}
+                status={{
+                  canReport: userId !== car.seller.id,
+                  isSendingMessage: state.isSendingMessage,
+                  messageSent: state.messageSent,
+                  showContactForm: state.showContactForm,
+                  showPhone: state.showPhone,
+                }}
+                contactMessage={state.contactMessage}
+                onTogglePhone={handleTogglePhone}
+                onToggleContactForm={handleToggleContactForm}
+                onSubmit={handleSendMessage}
+                onMessageChange={(value) =>
+                  dispatch({ type: "set_contact_message", contactMessage: value })
+                }
+                onMessageKeyDown={handleMessageKeyDown}
+                onMessagePaste={handleMessagePaste}
+                contactCaptchaToken={contactCaptchaToken}
+                captchaInstanceKey={contactCaptchaKey}
+                onContactCaptchaTokenChange={setContactCaptchaToken}
+                actionsRef={contactActionsRef}
+                onOpenReport={() =>
+                  setInteractionState((current) => ({
+                    ...current,
+                    isReportModalOpen: true,
+                  }))
+                }
+              />
+            </div>
+
+            <SellerInfoCard car={car} copy={copy} />
+
+            <div className="flex items-center justify-between px-2 text-xs text-text-muted">
+              <span>
+                {copy.text.views(formatMarketNumber(car.views_count, copy.market))}
+              </span>
+              <span>{formatDetailDate(car.created_at, copy.market)}</span>
+            </div>
+          </aside>
+
+          <div className="space-y-7 lg:col-span-2 sm:space-y-8">
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <SpecItem label={copy.text.specs.power} value={`${car.power_kw} kW`} />
-              <SpecItem label={copy.text.specs.engine} value={`${car.engine_volume_cm3} cm3`} />
+              <SpecItem
+                label={copy.text.specs.power}
+                value={car.power_kw ? `${car.power_kw} kW` : "-"}
+              />
+              <SpecItem
+                label={copy.text.specs.engine}
+                value={car.engine_volume_cm3 ? `${car.engine_volume_cm3} cm³` : "-"}
+              />
               <SpecItem
                 label={copy.text.specs.body}
                 value={formatDetailCarValue(car.body_style, copy, "bodyStyle")}
@@ -1104,7 +1217,7 @@ function CarDetailView({
                 {copy.text.specs.description}
               </h2>
               <p className="text-text-secondary leading-relaxed whitespace-pre-wrap">
-                {car.description}
+                {car.description.trim() || copy.text.specs.noDescription}
               </p>
             </section>
 
@@ -1134,57 +1247,51 @@ function CarDetailView({
                 <SimpleMap
                   lat={cityCoords.lat}
                   lng={cityCoords.lng}
-                  radiusKm={0}
+                  radiusKm={car.dealer_id ? 0 : 5}
                   cityName={car.location_city}
                 />
+                {!car.dealer_id ? (
+                  <p className="mt-2 text-xs text-text-tertiary">
+                    {copy.text.specs.approximateLocation}
+                  </p>
+                ) : null}
               </section>
             )}
           </div>
-
-          <aside className="space-y-3 lg:sticky lg:top-24">
-            <ContactSellerCard
-              car={car}
-              copy={copy}
-              isAdminPreview={isAdminPreview}
-              status={{
-                canReport: userId !== car.seller.id,
-                isSendingMessage: state.isSendingMessage,
-                messageSent: state.messageSent,
-                showContactForm: state.showContactForm,
-                showPhone: state.showPhone,
-              }}
-              contactMessage={state.contactMessage}
-              onTogglePhone={handleTogglePhone}
-              onToggleContactForm={handleToggleContactForm}
-              onSubmit={handleSendMessage}
-              onMessageChange={(value) =>
-                dispatch({ type: "set_contact_message", contactMessage: value })
-              }
-              onMessageKeyDown={handleMessageKeyDown}
-              onMessagePaste={handleMessagePaste}
-              contactCaptchaToken={contactCaptchaToken}
-              captchaInstanceKey={contactCaptchaKey}
-              onContactCaptchaTokenChange={setContactCaptchaToken}
-              onOpenReport={() =>
-                setInteractionState((current) => ({
-                  ...current,
-                  isReportModalOpen: true,
-                }))
-              }
-            />
-
-            <SellerInfoCard car={car} copy={copy} />
-
-            <div className="flex items-center justify-between text-xs text-text-muted px-2">
-              <span>
-                {copy.text.views(formatMarketNumber(car.views_count, copy.market))}
-              </span>
-              <span>{formatDetailDate(car.created_at, copy.market)}</span>
-            </div>
-          </aside>
         </div>
 
         <SimilarCarsSection similarCars={state.similarCars} copy={copy} />
+        {!isAdminPreview && !areContactActionsVisible ? (
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden">
+            <div className="mx-auto grid max-w-lg grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleToggleContactForm}
+                className="btn-primary min-h-12 px-3 text-sm font-semibold"
+              >
+                {state.showContactForm
+                  ? copy.text.contact.hideForm
+                  : copy.text.contact.writeMessage}
+              </button>
+              {state.showPhone && car.seller.phone ? (
+                <a
+                  href={`tel:${car.seller.phone}`}
+                  className="btn-secondary flex min-h-12 items-center justify-center px-3 text-center text-sm font-semibold"
+                >
+                  {copy.text.contact.callSeller}
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleTogglePhone}
+                  className="btn-secondary min-h-12 px-3 text-sm font-semibold"
+                >
+                  {copy.text.contact.showPhone}
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
         <ReportListingModal
           copy={copy}
           open={isReportModalOpen}
@@ -1228,6 +1335,8 @@ function CarGallery({
   enableViewTransitions: boolean;
   onSelectImage: (index: number) => void;
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const touchStartXRef = useRef<number | null>(null);
   const photos = car.photos_json?.length
     ? car.photos_json
     : getListingFallbackGallery(car.id);
@@ -1235,7 +1344,7 @@ function CarGallery({
   const selectedPhoto = optimizeCloudflareImage(photos[safeImageIndex], {
     width: 1600,
     height: 900,
-    fit: "cover",
+    fit: "contain",
     quality: 85,
     format: "auto",
   });
@@ -1251,31 +1360,58 @@ function CarGallery({
       { enabled: enableViewTransitions },
     );
   };
+  const showPrevious = () => {
+    selectImage(safeImageIndex > 0 ? safeImageIndex - 1 : photos.length - 1);
+  };
+  const showNext = () => {
+    selectImage(safeImageIndex < photos.length - 1 ? safeImageIndex + 1 : 0);
+  };
+  const handleTouchStart = (event: TouchEvent) => {
+    touchStartXRef.current = event.touches[0]?.clientX ?? null;
+  };
+  const handleTouchEnd = (event: TouchEvent) => {
+    const startX = touchStartXRef.current;
+    const endX = event.changedTouches[0]?.clientX;
+    touchStartXRef.current = null;
+    if (startX === null || typeof endX !== "number" || photos.length < 2) return;
+    const distance = endX - startX;
+    if (Math.abs(distance) < 50) return;
+    if (distance > 0) showPrevious();
+    else showNext();
+  };
 
   return (
+    <>
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_140px]">
-      <div className="view-transition-gallery-image relative aspect-video rounded-2xl outer-radius overflow-hidden bg-background-secondary border border-border-subtle shadow-sm">
-        <Image
-          src={selectedPhoto}
-          alt={`${car.brand} ${car.model}`}
-          fill
-          sizes="(max-width: 1024px) 100vw, 66vw"
-          priority
-          loading="eager"
-          fetchPriority="high"
-          className="object-cover"
-        />
+      <div
+        className="view-transition-gallery-image relative aspect-video overflow-hidden rounded-2xl border border-border-subtle bg-background-secondary shadow-sm outer-radius"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <button
+          type="button"
+          onClick={() => setIsExpanded(true)}
+          aria-label={copy.text.gallery.expand}
+          className="absolute inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        >
+          <Image
+            src={selectedPhoto}
+            alt={`${car.brand} ${car.model}`}
+            fill
+            sizes="(max-width: 1024px) 100vw, 66vw"
+            priority
+            loading="eager"
+            fetchPriority="high"
+            className="object-contain"
+          />
+        </button>
 
         {photos.length > 1 && (
           <>
             <button
               type="button"
               aria-label={copy.text.gallery.previous}
-              onClick={() =>
-                selectImage(
-                  safeImageIndex > 0 ? safeImageIndex - 1 : photos.length - 1,
-                )
-              }
+              onClick={showPrevious}
               className="absolute left-4 top-1/2 -translate-y-1/2 size-10 hit-target rounded-full bg-background-secondary/90 border border-border-subtle flex items-center justify-center hover:bg-background-secondary transition-colors motion-interruptible"
             >
               <ChevronLeftIcon className="size-5" />
@@ -1283,11 +1419,7 @@ function CarGallery({
             <button
               type="button"
               aria-label={copy.text.gallery.next}
-              onClick={() =>
-                selectImage(
-                  safeImageIndex < photos.length - 1 ? safeImageIndex + 1 : 0,
-                )
-              }
+              onClick={showNext}
               className="absolute right-4 top-1/2 -translate-y-1/2 size-10 hit-target rounded-full bg-background-secondary/90 border border-border-subtle flex items-center justify-center hover:bg-background-secondary transition-colors motion-interruptible"
             >
               <ChevronRightIcon className="size-5" />
@@ -1319,20 +1451,65 @@ function CarGallery({
                 src={optimizeCloudflareImage(entry.value, {
                   width: 320,
                   height: 180,
-                  fit: "cover",
+                  fit: "contain",
                   quality: 80,
                   format: "auto",
                 })}
                 alt={copy.text.gallery.photoAlt(car.brand, car.model, index + 1)}
                 fill
                 sizes="(max-width: 1024px) 80px, 140px"
-                className="object-cover"
+                className="object-contain bg-background-secondary"
               />
             </button>
           ))}
         </div>
       )}
     </div>
+      <Modal
+        open={isExpanded}
+        onClose={() => setIsExpanded(false)}
+        title={`${car.brand} ${car.model}`}
+        size="xl"
+        className="sm:max-w-6xl"
+      >
+        <div
+          className="relative h-[70dvh] min-h-80 overflow-hidden rounded-xl bg-background-dark"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <Image
+            src={selectedPhoto}
+            alt={copy.text.gallery.photoAlt(car.brand, car.model, safeImageIndex + 1)}
+            fill
+            sizes="95vw"
+            className="object-contain"
+          />
+          {photos.length > 1 ? (
+            <>
+              <button
+                type="button"
+                aria-label={copy.text.gallery.previous}
+                onClick={showPrevious}
+                className="absolute left-3 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                <ChevronLeftIcon className="size-6" />
+              </button>
+              <button
+                type="button"
+                aria-label={copy.text.gallery.next}
+                onClick={showNext}
+                className="absolute right-3 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                <ChevronRightIcon className="size-6" />
+              </button>
+            </>
+          ) : null}
+          <div className="absolute bottom-3 right-3 rounded-full bg-black/65 px-3 py-1 text-xs font-medium text-white">
+            {safeImageIndex + 1} / {photos.length}
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 }
 
@@ -1441,6 +1618,7 @@ function ContactSellerCard({
   contactCaptchaToken,
   captchaInstanceKey,
   onContactCaptchaTokenChange,
+  actionsRef,
   onOpenReport,
 }: {
   car: CarData;
@@ -1456,6 +1634,7 @@ function ContactSellerCard({
   contactMessage: string;
   contactCaptchaToken: string | null;
   captchaInstanceKey: number;
+  actionsRef: RefObject<HTMLDivElement | null>;
   onTogglePhone: () => void;
   onToggleContactForm: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -1500,30 +1679,42 @@ function ContactSellerCard({
             </p>
           </div>
 
-          <div className="mt-5 space-y-3">
+          <div ref={actionsRef} className="mt-5 space-y-3">
             <button
               type="button"
               onClick={onToggleContactForm}
-              className="btn-primary w-full py-3.5 text-sm font-semibold"
+              className={cn(
+                "w-full py-3.5 text-sm font-semibold",
+                showContactForm ? "btn-secondary" : "btn-primary",
+              )}
             >
               {showContactForm
                 ? copy.text.contact.hideForm
                 : copy.text.contact.writeMessage}
             </button>
-            <button
-              type="button"
-              onClick={onTogglePhone}
-              className="btn-secondary w-full py-3"
-            >
-              {showPhone
-                ? car.seller.phone || copy.text.contact.phoneNotProvided
-                : copy.text.contact.showPhone}
-            </button>
+            {showPhone && car.seller.phone ? (
+              <a
+                href={`tel:${car.seller.phone}`}
+                className="btn-secondary flex w-full items-center justify-center py-3 text-center"
+              >
+                {car.seller.phone}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={onTogglePhone}
+                className="btn-secondary w-full py-3"
+              >
+                {showPhone
+                  ? copy.text.contact.phoneNotProvided
+                  : copy.text.contact.showPhone}
+              </button>
+            )}
             {canReport ? (
               <button
                 type="button"
                 onClick={onOpenReport}
-                className="btn-secondary w-full py-3"
+                className="mx-auto block rounded-lg px-3 py-2 text-xs font-medium text-text-tertiary transition-colors hover:bg-error/5 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40"
               >
                 {copy.text.contact.report}
               </button>
@@ -1540,6 +1731,9 @@ function ContactSellerCard({
             <li>{copy.text.contact.inbox}</li>
             <li>{copy.text.contact.antiSpam}</li>
           </ul>
+          <p className="mt-3 rounded-xl border border-border-subtle bg-surface/60 p-3 text-xs leading-relaxed text-text-secondary">
+            {copy.text.contact.safetyNote}
+          </p>
 
           {showContactForm && (
             <div className="mt-6 border-t border-border pt-6">
@@ -1564,7 +1758,7 @@ function ContactSellerCard({
               ) : (
                 <form onSubmit={onSubmit}>
                   <textarea
-                    rows={5}
+                    rows={4}
                     value={contactMessage}
                     onChange={(event) => onMessageChange(event.target.value)}
                     onKeyDown={onMessageKeyDown}

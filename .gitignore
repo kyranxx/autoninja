@@ -147,6 +147,7 @@ output_*.png
 mobile_issue*.png
 /.superpowers/
 /.tmp/
+/tmp/
 /test-results/
 docs/project-atlas.html
 credential.md

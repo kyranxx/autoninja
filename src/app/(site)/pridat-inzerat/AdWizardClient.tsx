@@ -804,6 +804,7 @@ function WizardNavigation({
   t,
   tCommon,
   onBack,
+  disableContinue,
 }: {
   currentStep: number;
   isEditMode: boolean;
@@ -813,13 +814,14 @@ function WizardNavigation({
   t: ReturnType<typeof useTranslations>;
   tCommon: ReturnType<typeof useTranslations>;
   onBack: () => void;
+  disableContinue: boolean;
 }) {
   const visibleErrors = Object.values(errors).filter(
     (message): message is string => Boolean(message),
   );
 
   return (
-    <div className="mt-8 border-t border-border pt-6">
+    <div className="sticky bottom-0 z-20 -mx-6 mt-8 border-t border-border bg-background/95 px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-6 sm:shadow-none sm:backdrop-blur-none">
       {visibleErrors.length > 0 ? (
         <div
           id="listing-validation-summary"
@@ -852,7 +854,7 @@ function WizardNavigation({
         <button
           type="submit"
           data-testid="listing-submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || disableContinue}
           aria-busy={isSubmitting}
           aria-describedby={visibleErrors.length > 0 ? "listing-validation-summary" : undefined}
           className="flex min-h-12 items-center gap-2 rounded-xl bg-accent px-8 py-3 text-base font-bold text-white shadow-lg shadow-accent/25 transition-all hover:bg-accent-hover active:translate-y-0.5 active:scale-[0.98] active:shadow-none disabled:cursor-not-allowed disabled:opacity-70"
@@ -1729,6 +1731,7 @@ export default function AdWizardClient(props: AdWizardClientProps) {
               t={t}
               tCommon={tCommon}
               onBack={handleBack}
+              disableContinue={!isEditMode && state.currentStep === 1 && !state.formData.category}
             />
           </form>
         </div>

@@ -136,10 +136,10 @@ export function SavedSearchesPanel() {
   }
 
   return (
-    <section className="mt-8 rounded-2xl border border-border bg-background p-4 sm:p-5">
+    <section className="rounded-2xl border border-border bg-background p-4 sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-primary">{t("savedSearchesTitle")}</h3>
+          <h2 className="text-lg font-semibold text-primary">{t("savedSearchesTitle")}</h2>
           <p className="mt-1 text-sm text-secondary">{t("savedSearchesDescription")}</p>
         </div>
         <Button asChild variant="secondary" size="sm">
@@ -200,7 +200,7 @@ export function SavedSearchesPanel() {
                       }
                       disabled={isBusy}
                     >
-                      {entry.paused ? t("resumeAllAlerts") : t("pauseThisAlert")}
+                      {entry.paused ? t("resumeThisAlert") : t("pauseThisAlert")}
                     </Button>
                     <Button
                       type="button"

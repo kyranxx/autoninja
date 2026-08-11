@@ -560,10 +560,10 @@ function useDealerDashboardController({
             resolvedTotalInquiries = 0;
           } else {
             const { count, error: inquiriesError } = await supabase
-              .from("inquiries")
+              .from("inquiry_conversations")
               .select("id", { count: "exact", head: true })
               .in("ad_id", adIds)
-              .neq("sender_id", user.id);
+              .neq("buyer_id", user.id);
 
             if (inquiriesError) {
               console.error("Inquiries count fetch error:", inquiriesError);

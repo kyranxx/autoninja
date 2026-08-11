@@ -25,8 +25,8 @@ import { createCsrfHeaders } from "@/lib/security/client-csrf";
 import { trackAnalyticsEvent } from "@/lib/analytics/client";
 import { CREATE_LISTING_ROUTE } from "@/lib/routes";
 import {
-  mapInquiriesToConversations,
-  type InquiryRow,
+  mapInquiryThreadsToConversations,
+  type InquiryConversationRow,
 } from "@/lib/inquiries/conversations";
 import {
   PlusIcon,
@@ -36,6 +36,8 @@ import {
   ClockIcon,
   HeartIcon,
   CarIcon,
+  ChevronLeftIcon,
+  ExternalLinkIcon,
   XIcon,
 } from "@/components/ui/Icons";
 import {
@@ -46,7 +48,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/shadcn/dialog";
-import TurnstileCaptcha from "@/components/security/TurnstileCaptcha";
 import {
   AdsIcon,
   SavedIcon,
@@ -54,6 +55,7 @@ import {
   SettingsIcon,
 } from "@/components/ui/DashboardIcons";
 import { useMarket, useMarketCode } from "@/context/MarketContext";
+import { SavedSearchesPanel } from "@/components/account/SavedSearchesPanel";
 
 const EmbeddedAdWizard = dynamic(() => import("../pridat-inzerat/AdWizardClient"), {
   ssr: false,
@@ -118,6 +120,8 @@ function myAdsTabUiReducer(
 
 interface SavedAd {
   id: string;
+  brand?: string;
+  model?: string;
   year: number;
   price_eur: number;
   status: string;
@@ -189,7 +193,7 @@ const TABS_CONFIG = [
   { id: "settings", labelKey: "settings", Icon: SettingsIcon },
 ];
 
-type MessageConversation = ReturnType<typeof mapInquiriesToConversations>[number];
+type MessageConversation = ReturnType<typeof mapInquiryThreadsToConversations>[number];
 
 type MessagesTabCacheEntry = {
   conversations: MessageConversation[];
@@ -211,27 +215,6 @@ function getAccountInlineCopy(locale: string) {
         submittedForApproval: "Anunțul a fost trimis pentru aprobare.",
         listingSaved: "Anunțul a fost salvat.",
         wholeMarket: "România",
-        backTo: "Înapoi la",
-        adId: "ID anunț",
-        replyPlaceholder: "Scrieți răspunsul...",
-        confirmCaptcha: "Confirmați captcha înainte de trimitere.",
-        enterToSend: "Enter trimite mesajul, Shift+Enter adaugă un rând nou.",
-        captchaEnablesSend: "Trimiterea se activează după confirmarea captcha.",
-        sending: "Se trimite...",
-        reply: "Răspunde",
-        deleting: "Se șterge...",
-        deleteMessage: "Șterge mesajul",
-        confirmDeleteMessage: "Sigur doriți să ștergeți acest mesaj?",
-        cannotReply: "Nu se poate trimite răspuns pentru acest mesaj.",
-        messagesLoadFailed: "Mesajele nu au putut fi încărcate.",
-        fallbackCarTitle: "Anunț",
-        incomingLabel: "Cumpărător",
-        outgoingLabel: "Vânzător",
-        replyFailed: "Răspunsul nu a putut fi trimis.",
-        replySent: "Răspunsul a fost trimis.",
-        deleteFailed: "Mesajul nu a putut fi șters.",
-        messageDeleted: "Mesajul a fost șters.",
-        leadUpdateFailed: "Calitatea leadului nu a putut fi modificată.",
       }
     : {
         myAccountKicker: "Môj účet",
@@ -239,27 +222,6 @@ function getAccountInlineCopy(locale: string) {
         submittedForApproval: "Inzerát bol odoslaný na schválenie.",
         listingSaved: "Inzerát bol uložený.",
         wholeMarket: "Slovensko",
-        backTo: "Späť na",
-        adId: "ID inzerátu",
-        replyPlaceholder: "Napíšte odpoveď...",
-        confirmCaptcha: "Pred odoslaním potvrďte captcha.",
-        enterToSend: "Enter odošle správu, Shift+Enter vloží nový riadok.",
-        captchaEnablesSend: "Odoslanie sa aktivuje po potvrdení captcha.",
-        sending: "Odosielanie...",
-        reply: "Odpovedať",
-        deleting: "Mažem...",
-        deleteMessage: "Vymazať správu",
-        confirmDeleteMessage: "Naozaj chcete vymazať túto správu?",
-        cannotReply: "Nie je možné odoslať odpoveď pre túto správu.",
-        messagesLoadFailed: "Nepodarilo sa načítať správy.",
-        fallbackCarTitle: "Inzerát",
-        incomingLabel: "Záujemca",
-        outgoingLabel: "Predajca",
-        replyFailed: "Nepodarilo sa odoslať odpoveď.",
-        replySent: "Odpoveď bola odoslaná.",
-        deleteFailed: "Nepodarilo sa vymazať správu.",
-        messageDeleted: "Správa bola vymazaná.",
-        leadUpdateFailed: "Nepodarilo sa upraviť kvalitu leadu.",
       };
 }
 
@@ -385,8 +347,10 @@ function useDashboardClientView({
         .from("ads")
         .select(
           `
-                    id, 
-                    year, 
+                    id,
+                    brand,
+                    model,
+                    year,
                     price_eur, 
                     mileage_km, 
                     description,
@@ -410,9 +374,28 @@ function useDashboardClientView({
         .order("created_at", { ascending: false });
 
       if (!error && data) {
+        const adIds = data.map((ad) => ad.id);
+        const inquiryCounts = new Map<string, number>();
+        if (adIds.length > 0) {
+          const { data: conversations } = await supabase
+            .from("inquiry_conversations")
+            .select("ad_id")
+            .eq("seller_id", user.id)
+            .in("ad_id", adIds);
+          for (const conversation of conversations || []) {
+            inquiryCounts.set(
+              conversation.ad_id,
+              (inquiryCounts.get(conversation.ad_id) || 0) + 1,
+            );
+          }
+        }
+        const adsWithInquiryCounts = data.map((ad) => ({
+          ...ad,
+          inquiries: inquiryCounts.get(ad.id) || 0,
+        }));
         setAdsState((prev) => ({
           ...prev,
-          userAds: sortAdsActiveFirst(data as unknown as UserAd[]),
+          userAds: sortAdsActiveFirst(adsWithInquiryCounts as unknown as UserAd[]),
         }));
       }
     } catch (err) {
@@ -547,6 +530,28 @@ function useDashboardClientView({
     marketCode,
   ]);
 
+  const restoreSavedCar = useCallback(
+    async (adId: string) => {
+      if (!user) return;
+      const { error } = await supabase
+        .from("saved_ads")
+        .insert({ user_id: user.id, ad_id: adId });
+
+      if (error && error.code !== "23505") {
+        toast.error(tErrors("generic"));
+        return;
+      }
+
+      setAdsState((prev) => {
+        const nextSavedIds = new Set(prev.savedCarIds);
+        nextSavedIds.add(adId);
+        return { ...prev, savedCarIds: nextSavedIds };
+      });
+      toast.success(t("savedRestored"));
+    },
+    [supabase, t, tErrors, user],
+  );
+
   const handleUnsaveCar = useCallback(
     async (adId: string) => {
       if (!user) return;
@@ -564,12 +569,20 @@ function useDashboardClientView({
           newSet.delete(adId);
           return { ...prev, savedCarIds: newSet };
         });
+        toast.success(t("savedRemoved"), {
+          action: {
+            label: t("undo"),
+            onClick: () => {
+              void restoreSavedCar(adId);
+            },
+          },
+        });
       } catch (err) {
         console.error("Error removing saved car:", err);
         toast.error(tErrors("generic"));
       }
     },
-    [user, supabase, tErrors],
+    [restoreSavedCar, supabase, t, tErrors, user],
   );
 
   const handleSignOutWithRedirect = async () => {
@@ -864,6 +877,8 @@ function useMyAdsTabView({
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
+  const tFuel = useTranslations("fuel");
+  const tTransmission = useTranslations("transmission");
   const locale = useLocale();
   const localeTag = getLocaleTag(locale);
 
@@ -935,6 +950,12 @@ function useMyAdsTabView({
   const getBrandName = (ad: UserAd) =>
     ad.brands?.name || ad.brand || t("unknown");
   const getModelName = (ad: UserAd) => ad.models?.name || ad.model || "";
+  const getFuelLabel = (fuel: string | undefined) =>
+    fuel && tFuel.has(fuel) ? tFuel(fuel) : fuel || t("notProvided");
+  const getTransmissionLabel = (transmission: string | undefined) =>
+    transmission && tTransmission.has(transmission)
+      ? tTransmission(transmission)
+      : transmission || t("notProvided");
   const getPhoto = (ad: UserAd) => {
     if (ad.photo) {
       return optimizeCloudflareImage(ad.photo, {
@@ -966,10 +987,27 @@ function useMyAdsTabView({
     if (Number.isNaN(date.getTime())) return t("notProvided");
     return date.toLocaleDateString(localeTag);
   };
+  const activeAdsCount = ads.filter((ad) => ad.status === "active").length;
+  const getStatusHelp = (status: string) => {
+    switch (status) {
+      case "active":
+        return t("listingStatusActiveHelp");
+      case "pending":
+        return t("listingStatusPendingHelp");
+      case "rejected":
+        return t("listingStatusRejectedHelp");
+      case "expired":
+        return t("listingStatusExpiredHelp");
+      case "sold":
+        return t("listingStatusSoldHelp");
+      default:
+        return "";
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,18rem),1fr))]">
         {[
           "myads-skeleton-1",
           "myads-skeleton-2",
@@ -1015,7 +1053,14 @@ function useMyAdsTabView({
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div>
+          <div className="mb-4 flex flex-col gap-1 rounded-xl border border-primary/10 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="font-semibold text-primary">{t("myAds")}</h2>
+            <p className="text-sm text-secondary">
+              {t("listingsSummary", { active: activeAdsCount, total: ads.length })}
+            </p>
+          </div>
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,18rem),1fr))]">
           {ads.map((ad, index) => {
             const status = getStatusBadge(ad.status);
             const daysRemaining = getDaysRemaining(ad.expires_at);
@@ -1035,25 +1080,25 @@ function useMyAdsTabView({
                   href={adPath}
                   className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                 >
-                  <div className="relative aspect-[16/10]">
+                  <div className="relative aspect-[16/10] bg-background-muted">
                     <Image
                       src={getPhoto(ad)}
                       alt={`${getBrandName(ad)} ${getModelName(ad)}`}
                       fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 20vw"
+                      className="object-contain"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 320px"
                       priority={index === 0}
                       loading={index === 0 ? "eager" : "lazy"}
                       fetchPriority={index === 0 ? "high" : "auto"}
                     />
                     {ad.is_top_ad && (
                       <span className="absolute left-2 top-2 rounded-md bg-accent px-2 py-0.5 text-xs font-semibold text-white">
-                        Exclusive
+                        {t("topListingBadge")}
                       </span>
                     )}
                     {ad.is_highlighted && (
-                      <span className="absolute left-2 top-10 rounded-md bg-warning px-2 py-0.5 text-xs font-semibold text-primary">
-                        Premium
+                      <span className="absolute left-2 top-10 rounded-md bg-warning px-2 py-0.5 text-xs font-semibold text-text-primary">
+                        {t("highlightedListingBadge")}
                       </span>
                     )}
                     <span
@@ -1081,7 +1126,7 @@ function useMyAdsTabView({
 
                   {ad.status === "rejected" && ad.moderation_rejection_note ? (
                     <div className="rounded-xl border border-error/20 bg-error/5 p-3 text-sm">
-                      <p className="font-semibold text-error">Dôvod zamietnutia</p>
+                      <p className="font-semibold text-error">{t("rejectionReason")}</p>
                       <p className="mt-1 text-text-secondary">{ad.moderation_rejection_note}</p>
                     </div>
                   ) : null}
@@ -1089,19 +1134,31 @@ function useMyAdsTabView({
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm text-primary/80">
                     <span>{ad.year || t("notProvided")}</span>
                     <span>{formatMileage(ad.mileage_km)}</span>
-                    <span className="capitalize">{ad.fuel || t("notProvided")}</span>
-                    <span className="capitalize">{ad.transmission || t("notProvided")}</span>
+                    <span>{getFuelLabel(ad.fuel)}</span>
+                    <span>{getTransmissionLabel(ad.transmission)}</span>
                     <span>{ad.location_city || t("notProvided")}</span>
                     <span>{formatCreatedAt(ad.created_at)}</span>
                   </div>
 
-                  <div className="flex flex-wrap gap-3 text-sm text-primary/75">
-                    <span className="flex items-center gap-1 rounded-full bg-background-muted px-2 py-1">
-                      <EyeIcon className="size-4" />
+                  {getStatusHelp(ad.status) ? (
+                    <p className="rounded-lg bg-background-muted px-3 py-2 text-xs leading-5 text-secondary">
+                      {getStatusHelp(ad.status)}
+                    </p>
+                  ) : null}
+
+                  <div className="flex flex-wrap gap-3 text-sm text-primary">
+                    <span
+                      className="flex items-center gap-1 rounded-full bg-background-muted px-2 py-1"
+                      aria-label={t("viewsCount", { count: getViews(ad) })}
+                    >
+                      <EyeIcon className="size-4" aria-hidden="true" />
                       {getViews(ad)}
                     </span>
-                    <span className="flex items-center gap-1 rounded-full bg-background-muted px-2 py-1">
-                      <MessageIcon className="size-4" />
+                    <span
+                      className="flex items-center gap-1 rounded-full bg-background-muted px-2 py-1"
+                      aria-label={t("inquiriesCount", { count: getInquiries(ad) })}
+                    >
+                      <MessageIcon className="size-4" aria-hidden="true" />
                       {getInquiries(ad)}
                     </span>
                     {daysRemaining !== null && (
@@ -1109,22 +1166,29 @@ function useMyAdsTabView({
                         className={`flex items-center gap-1 rounded-full px-2 py-1 ${
                           daysRemaining <= 3
                             ? "bg-error text-white"
-                            : "bg-background-muted text-primary/75"
+                            : "bg-background-muted text-primary"
                         }`}
+                        aria-label={t("daysRemaining", { count: daysRemaining })}
                       >
-                        <ClockIcon className="size-4" />
+                        <ClockIcon className="size-4" aria-hidden="true" />
                         {daysRemaining} {t("days")}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2 pt-1">
+                  <div className="grid grid-cols-2 gap-2 pt-1">
                     <Link
                       href={`/upravit-inzerat/${ad.id}`}
-                      className="market-action-secondary min-h-11 px-4 py-2 text-sm"
+                      className="market-action-primary min-h-11 px-4 py-2 text-center text-sm"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {tCommon("edit")}
+                    </Link>
+                    <Link
+                      href={adPath}
+                      className="market-action-secondary min-h-11 px-4 py-2 text-center text-sm"
+                    >
+                      {t("viewListing")}
                     </Link>
                     <button
                       type="button"
@@ -1138,7 +1202,7 @@ function useMyAdsTabView({
                         e.stopPropagation();
                         updateMyAdsUiState({ deleteAd: ad });
                       }}
-                      className="market-action-secondary min-h-11 px-4 py-2 text-sm border-error/40 bg-error/5 text-error hover:bg-error/10"
+                      className="col-span-2 justify-self-end rounded-lg px-2 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40"
                     >
                       {t("deleteListing")}
                     </button>
@@ -1147,6 +1211,7 @@ function useMyAdsTabView({
               </article>
             );
           })}
+          </div>
         </div>
       )}
 
@@ -1303,6 +1368,7 @@ function useSavedTabView({
     [savedAdIds, user],
   );
   const cachedState = cacheKey ? SAVED_TAB_CACHE.get(cacheKey) : null;
+  const [expandedAlertAdId, setExpandedAlertAdId] = useState<string | null>(null);
   const [savedState, setSavedState] = useState<{
     savedAds: SavedAd[];
     preferences: Record<string, SavedAdAlertPreference>;
@@ -1370,6 +1436,8 @@ function useSavedTabView({
         .select(
           `
             id,
+            brand,
+            model,
             year,
             price_eur,
             mileage_km,
@@ -1489,8 +1557,8 @@ function useSavedTabView({
     void loadSavedAds();
   }, [loadSavedAds]);
 
-  const getBrandName = (ad: SavedAd) => ad.brands?.name || t("unknown");
-  const getModelName = (ad: SavedAd) => ad.models?.name || "";
+  const getBrandName = (ad: SavedAd) => ad.brands?.name || ad.brand || t("unknown");
+  const getModelName = (ad: SavedAd) => ad.models?.name || ad.model || "";
   const getPhoto = (ad: SavedAd) => {
     if (ad.photos_json && ad.photos_json.length > 0) {
       return optimizeCloudflareImage(ad.photos_json[0], {
@@ -1567,6 +1635,7 @@ function useSavedTabView({
 
       if (error) {
         console.error("Error updating alert preference:", error);
+        toast.error(t("saveFailed"));
         setSavedState((prev) => ({
           ...prev,
           preferences: {
@@ -1581,7 +1650,7 @@ function useSavedTabView({
         updatingAdId: prev.updatingAdId === adId ? null : prev.updatingAdId,
       }));
     },
-    [savedState.alertsSupported, savedState.preferences, supabase, user],
+    [savedState.alertsSupported, savedState.preferences, supabase, t, user],
   );
 
   const applyPreferenceToAll = useCallback(
@@ -1619,6 +1688,7 @@ function useSavedTabView({
 
       if (error) {
         console.error("Error applying bulk alert preference update:", error);
+        toast.error(t("saveFailed"));
         setSavedState((prev) => ({
           ...prev,
           preferences: previousPreferences,
@@ -1630,7 +1700,7 @@ function useSavedTabView({
         isBulkUpdating: false,
       }));
     },
-    [savedState.alertsSupported, savedState.preferences, savedState.savedAds, supabase, user],
+    [savedState.alertsSupported, savedState.preferences, savedState.savedAds, supabase, t, user],
   );
 
   const handleUnsaveClick = (e: React.MouseEvent, id: string) => {
@@ -1645,53 +1715,67 @@ function useSavedTabView({
       return { ad, preference };
     });
   }, [createDefaultPreference, savedState.preferences, savedState.savedAds]);
+  const allAlertsPaused =
+    derivedSavedAds.length > 0 &&
+    derivedSavedAds.every(({ preference }) => preference.paused);
+  const allAlertsActive =
+    derivedSavedAds.length > 0 &&
+    derivedSavedAds.every(({ preference }) => !preference.paused);
 
   if (savedState.isLoading) {
     return (
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {["saved-skeleton-1", "saved-skeleton-2", "saved-skeleton-3"].map(
-          (skeletonKey) => (
-            <div
-              key={skeletonKey}
-              className="market-card animate-pulse overflow-hidden"
-            >
-              <div className="aspect-[16/10] bg-surface" />
-              <div className="p-4 space-y-3">
-                <div className="h-5 bg-surface rounded w-3/4" />
-                <div className="h-4 bg-surface rounded w-1/2" />
-                <div className="h-6 bg-surface rounded w-1/3" />
+      <div className="space-y-6">
+        <SavedSearchesPanel />
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {["saved-skeleton-1", "saved-skeleton-2", "saved-skeleton-3"].map(
+            (skeletonKey) => (
+              <div
+                key={skeletonKey}
+                className="market-card animate-pulse overflow-hidden"
+              >
+                <div className="aspect-[16/10] bg-surface" />
+                <div className="p-4 space-y-3">
+                  <div className="h-5 bg-surface rounded w-3/4" />
+                  <div className="h-4 bg-surface rounded w-1/2" />
+                  <div className="h-6 bg-surface rounded w-1/3" />
+                </div>
               </div>
-            </div>
-          ),
-        )}
+            ),
+          )}
+        </div>
       </div>
     );
   }
 
   if (savedState.savedAds.length === 0) {
     return (
-      <div className="market-panel mx-auto max-w-xl p-8 text-center sm:p-10">
-        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl border border-primary/12 bg-primary/5 text-primary">
-          <HeartIcon className="size-8" />
+      <div className="space-y-6">
+        <SavedSearchesPanel />
+        <div className="market-panel mx-auto max-w-xl p-8 text-center sm:p-10">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl border border-primary/12 bg-primary/5 text-primary">
+            <HeartIcon className="size-8" />
+          </div>
+        <h2 className="mb-2 text-lg font-semibold text-primary">{t("savedAds")}</h2>
+          <p className="text-secondary mb-4">{t("clickHeartToSave")}</p>
+          <Link
+            href="/vysledky"
+            className="market-action-primary inline-flex px-6 py-3 text-sm"
+          >
+            {t("browseCars")}
+          </Link>
         </div>
-        <h3 className="mb-2 text-lg font-semibold text-primary">{t("savedAds")}</h3>
-        <p className="text-secondary mb-4">{t("clickHeartToSave")}</p>
-        <Link
-          href="/vysledky"
-          className="market-action-primary inline-flex px-6 py-3 text-sm"
-        >
-          {t("browseCars")}
-        </Link>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-6">
+      <SavedSearchesPanel />
+      <div>
       <div className="mb-6 rounded-2xl border border-primary/10 bg-primary/5 p-4 sm:p-5">
         <div>
           <div className="flex items-baseline justify-between gap-3">
-            <h3 className="text-lg font-semibold text-primary">{t("savedAds")}</h3>
+            <h2 className="text-lg font-semibold text-primary">{t("savedAds")}</h2>
             <span className="rounded-full bg-background px-3 py-1 text-sm font-semibold text-primary">
               {savedState.savedAds.length}
             </span>
@@ -1703,10 +1787,12 @@ function useSavedTabView({
           <p className="mt-4 text-sm text-warning">{t("alertsUnavailable")}</p>
         )}
 
+        {savedState.savedAds.length >= 2 ? (
         <div className="mt-5 border-t border-primary/10 pt-4">
-          <h4 className="text-sm font-semibold text-primary">{t("bulkAlertsTitle")}</h4>
+          <h3 className="text-sm font-semibold text-primary">{t("bulkAlertsTitle")}</h3>
           <p className="mt-1 text-xs text-secondary">{t("bulkAlertsDescription")}</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-3 flex flex-wrap gap-2">
+            {!allAlertsPaused ? (
             <button
               type="button"
               onClick={() => {
@@ -1717,6 +1803,8 @@ function useSavedTabView({
             >
               {t("pauseAllAlerts")}
             </button>
+            ) : null}
+            {!allAlertsActive ? (
             <button
               type="button"
               onClick={() => {
@@ -1727,8 +1815,10 @@ function useSavedTabView({
             >
               {t("resumeAllAlerts")}
             </button>
+            ) : null}
           </div>
         </div>
+        ) : null}
 
         {savedState.isBulkUpdating && (
           <p className="mt-3 text-xs text-tertiary">{t("updatingAlerts")}</p>
@@ -1736,7 +1826,7 @@ function useSavedTabView({
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {derivedSavedAds.map(({ ad, preference }) => (
+        {derivedSavedAds.map(({ ad, preference }, index) => (
             <div
               key={ad.id}
               className="market-card overflow-hidden bg-background"
@@ -1748,14 +1838,17 @@ function useSavedTabView({
                   model: getModelName(ad),
                   year: ad.year,
                 })}
-                className="relative block aspect-[16/10]"
+                className="relative block aspect-[16/10] bg-background-muted"
               >
                 <Image
                   src={getPhoto(ad)}
                   alt={`${getBrandName(ad)} ${getModelName(ad)}`}
                   fill
-                  className="object-cover"
+                  className="object-contain"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  priority={index === 0}
+                  loading={index === 0 ? "eager" : "lazy"}
+                  fetchPriority={index === 0 ? "high" : "auto"}
                 />
               </Link>
               <div className="p-4">
@@ -1774,10 +1867,10 @@ function useSavedTabView({
                   <button
                     type="button"
                     onClick={(e) => handleUnsaveClick(e, ad.id)}
-                    className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-error/35 bg-error/5 px-3.5 py-2 text-sm font-semibold text-error transition-colors hover:bg-error/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 sm:w-auto"
+                    className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-secondary transition-colors hover:bg-background-muted hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:w-auto"
                     title={t("removeFromSaved")}
                   >
-                    <XIcon className="size-4" aria-hidden="true" />
+                    <XIcon className="size-3.5" aria-hidden="true" />
                     {t("removeFromSaved")}
                   </button>
                 </div>
@@ -1788,7 +1881,7 @@ function useSavedTabView({
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <span className="text-xl font-bold text-accent">
-                    {ad.price_eur?.toLocaleString(localeTag)} EUR
+                    {formatCurrency(ad.price_eur)}
                   </span>
                   <span className="inline-flex items-center rounded-full bg-background-muted px-2 py-0.5 text-xs font-medium text-secondary">
                     {getStatusLabel(ad.status)}
@@ -1798,9 +1891,19 @@ function useSavedTabView({
 
                 <div className="mt-4 rounded-xl border border-border-strong bg-background p-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-                      {t("alertSettings")}
-                    </p>
+                    <button
+                      type="button"
+                      aria-expanded={expandedAlertAdId === ad.id}
+                      aria-controls={`saved-alert-settings-${ad.id}`}
+                      onClick={() => {
+                        setExpandedAlertAdId((current) => current === ad.id ? null : ad.id);
+                      }}
+                      className="rounded-sm text-left text-sm font-semibold text-primary hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      {expandedAlertAdId === ad.id
+                        ? t("hideAlertSettings")
+                        : t("showAlertSettings")}
+                    </button>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                         preference.paused
@@ -1811,40 +1914,28 @@ function useSavedTabView({
                       {preference.paused ? t("alertsPaused") : t("active")}
                     </span>
                   </div>
-                   <p className="mt-1 text-[11px] text-secondary">
-                     {t("baselineAtSave")}: {preference.baseline_price_eur?.toLocaleString(localeTag) || ad.price_eur?.toLocaleString(localeTag)} EUR
-                   </p>
-                   <div className="mt-3 space-y-2">
-                     <SavedAlertCheckbox
-                       id={`saved-alert-price-drop-${ad.id}`}
-                       title={t("notifyOnPriceDrop")}
-                       description={t("notifyOnPriceDropHelp")}
-                       checked={preference.notify_price_drop}
-                       disabled={!savedState.alertsSupported || savedState.isBulkUpdating || savedState.updatingAdId === ad.id}
-                       onChange={(checked) => {
-                         void updatePreference(ad.id, { notify_price_drop: checked });
-                       }}
-                     />
-                     <SavedAlertCheckbox
-                       id={`saved-alert-status-change-${ad.id}`}
-                       title={t("notifyOnStatusChange")}
-                       description={t("notifyOnStatusChangeHelp")}
-                       checked={preference.notify_status_change}
-                       disabled={!savedState.alertsSupported || savedState.isBulkUpdating || savedState.updatingAdId === ad.id}
-                       onChange={(checked) => {
-                         void updatePreference(ad.id, { notify_status_change: checked });
-                       }}
-                     />
-                     <SavedAlertCheckbox
-                       id={`saved-alert-email-${ad.id}`}
-                       title={t("notifyByEmail")}
-                       description={t("notifyByEmailHelp")}
-                       checked={preference.notify_email}
-                       disabled={!savedState.alertsSupported || savedState.isBulkUpdating || savedState.updatingAdId === ad.id}
-                       onChange={(checked) => {
-                         void updatePreference(ad.id, { notify_email: checked });
-                       }}
-                     />
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-secondary">
+                    {preference.notify_price_drop ? (
+                      <span className="rounded-full bg-background-muted px-2 py-0.5">
+                        {t("priceDropped")}
+                      </span>
+                    ) : null}
+                    {preference.notify_status_change ? (
+                      <span className="rounded-full bg-background-muted px-2 py-0.5">
+                        {t("statusChanged")}
+                      </span>
+                    ) : null}
+                    {preference.notify_email ? (
+                      <span className="rounded-full bg-background-muted px-2 py-0.5">
+                        {t("notifyByEmail")}
+                      </span>
+                    ) : null}
+                  </div>
+                  {expandedAlertAdId === ad.id ? (
+                   <div id={`saved-alert-settings-${ad.id}`} className="mt-3 space-y-2 border-t border-border pt-3">
+                     <p className="mb-2 text-[11px] text-secondary">
+                       {t("baselineAtSave")}: {formatCurrency(preference.baseline_price_eur ?? ad.price_eur)}
+                     </p>
                      <SavedAlertCheckbox
                        id={`saved-alert-pause-${ad.id}`}
                        title={t("pauseThisAlert")}
@@ -1855,11 +1946,62 @@ function useSavedTabView({
                          void updatePreference(ad.id, { paused: checked });
                        }}
                      />
+                     <SavedAlertCheckbox
+                       id={`saved-alert-price-drop-${ad.id}`}
+                       title={t("notifyOnPriceDrop")}
+                       description={t("notifyOnPriceDropHelp")}
+                       checked={preference.notify_price_drop}
+                       disabled={!savedState.alertsSupported || savedState.isBulkUpdating || savedState.updatingAdId === ad.id}
+                       onChange={(checked) => {
+                         void updatePreference(ad.id, {
+                           notify_price_drop: checked,
+                           ...(!checked && !preference.notify_status_change
+                             ? { notify_email: false }
+                             : {}),
+                         });
+                       }}
+                     />
+                     <SavedAlertCheckbox
+                       id={`saved-alert-status-change-${ad.id}`}
+                       title={t("notifyOnStatusChange")}
+                       description={t("notifyOnStatusChangeHelp")}
+                       checked={preference.notify_status_change}
+                       disabled={!savedState.alertsSupported || savedState.isBulkUpdating || savedState.updatingAdId === ad.id}
+                       onChange={(checked) => {
+                         void updatePreference(ad.id, {
+                           notify_status_change: checked,
+                           ...(!checked && !preference.notify_price_drop
+                             ? { notify_email: false }
+                             : {}),
+                         });
+                       }}
+                     />
+                     <SavedAlertCheckbox
+                       id={`saved-alert-email-${ad.id}`}
+                       title={t("notifyByEmail")}
+                       description={
+                         preference.notify_price_drop || preference.notify_status_change
+                           ? t("notifyByEmailHelp")
+                           : t("alertChannelRequiresTrigger")
+                       }
+                       checked={preference.notify_email}
+                       disabled={
+                         (!preference.notify_price_drop && !preference.notify_status_change) ||
+                         !savedState.alertsSupported ||
+                         savedState.isBulkUpdating ||
+                         savedState.updatingAdId === ad.id
+                       }
+                       onChange={(checked) => {
+                         void updatePreference(ad.id, { notify_email: checked });
+                       }}
+                     />
                    </div>
+                  ) : null}
                  </div>
                </div>
               </div>
           ))}
+      </div>
       </div>
     </div>
   );
@@ -1878,10 +2020,8 @@ type MessagesTabStateAction =
 
 type MessagesTabUiState = {
   replyMessage: string;
-  replyCaptchaToken: string | null;
-  captchaInstanceKey: number;
   isSendingReply: boolean;
-  isDeletingMessage: boolean;
+  isArchivingConversation: boolean;
   isUpdatingQualification: boolean;
   isMobileConversationOpen: boolean;
 };
@@ -1900,17 +2040,24 @@ function messagesTabUiReducer(
   return typeof patch === "function" ? patch(state) : { ...state, ...patch };
 }
 
-function normalizeInquiryRows(data: unknown): InquiryRow[] {
+function normalizeConversationRows(data: unknown): InquiryConversationRow[] {
   if (!Array.isArray(data)) return [];
 
   return data.map((entry) => {
-    const row = entry as InquiryRow & { ads?: InquiryRow["ads"] | InquiryRow["ads"][] };
+    const row = entry as InquiryConversationRow & {
+      ads?: InquiryConversationRow["ads"] | InquiryConversationRow["ads"][];
+      inquiries?: InquiryConversationRow["inquiries"] | null;
+    };
     const adValue = Array.isArray(row.ads) ? (row.ads[0] ?? null) : (row.ads ?? null);
-    return { ...row, ads: adValue };
+    return {
+      ...row,
+      ads: adValue,
+      inquiries: Array.isArray(row.inquiries) ? row.inquiries : [],
+    };
   });
 }
 
-function mapProfileNames(data: unknown): Record<string, string> {
+function mapProfileNames(data: unknown, fallbackName: string): Record<string, string> {
   if (!Array.isArray(data)) return {};
   const result: Record<string, string> = {};
 
@@ -1920,7 +2067,7 @@ function mapProfileNames(data: unknown): Record<string, string> {
     result[row.id] =
       typeof row.full_name === "string" && row.full_name.trim().length > 0
         ? row.full_name.trim()
-        : "Používateľ";
+        : fallbackName;
   }
 
   return result;
@@ -1936,7 +2083,6 @@ function useMessagesTabView() {
   const t = useTranslations("dashboard");
   const locale = useLocale();
   const localeTag = getLocaleTag(locale);
-  const inlineCopy = useMemo(() => getAccountInlineCopy(locale), [locale]);
   const userId = user?.id ?? null;
   const cachedMessages = userId ? MESSAGES_TAB_CACHE.get(userId) : null;
   const [messagesState, updateMessagesState] = useReducer(
@@ -1952,22 +2098,28 @@ function useMessagesTabView() {
   const [reloadToken, requestMessagesReload] = useReducer((value: number) => value + 1, 0);
   const [messageUiState, updateMessageUiState] = useReducer(messagesTabUiReducer, {
     replyMessage: "",
-    replyCaptchaToken: null,
-    captchaInstanceKey: 0,
     isSendingReply: false,
-    isDeletingMessage: false,
+    isArchivingConversation: false,
     isUpdatingQualification: false,
     isMobileConversationOpen: false,
   });
+  const [isDesktopMessagesLayout, setIsDesktopMessagesLayout] = useState(false);
   const {
     replyMessage,
-    replyCaptchaToken,
-    captchaInstanceKey,
     isSendingReply,
-    isDeletingMessage,
+    isArchivingConversation,
     isUpdatingQualification,
     isMobileConversationOpen,
   } = messageUiState;
+  const messageHistoryRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const syncLayout = () => setIsDesktopMessagesLayout(mediaQuery.matches);
+    syncLayout();
+    mediaQuery.addEventListener("change", syncLayout);
+    return () => mediaQuery.removeEventListener("change", syncLayout);
+  }, []);
 
   useEffect(() => {
     if (!userId) {
@@ -2044,53 +2196,55 @@ function useMessagesTabView() {
       if (isCancelled) return;
 
       const { data, error } = await supabase
-        .from("inquiries")
+        .from("inquiry_conversations")
         .select(
-          "id, sender_id, recipient_id, message, is_read, is_qualified, qualified_at, created_at, ads(id, brand, model, photos_json, seller_id)",
+          "id, ad_id, buyer_id, seller_id, buyer_archived_at, seller_archived_at, is_qualified, qualified_at, created_at, last_message_at, ads(id, brand, model, photos_json, seller_id, status), inquiries(id, sender_id, recipient_id, message, is_read, created_at)",
         )
-        .order("created_at", { ascending: false })
-        .limit(200);
+        .order("last_message_at", { ascending: false })
+        .limit(100);
 
       if (!isCancelled) {
         if (error) {
           updateMessagesState((prev) => ({
             ...prev,
             isLoading: false,
-            error: error.message || inlineCopy.messagesLoadFailed,
+            error: error.message || t("messagesLoadFailed"),
           }));
         } else {
-          const inquiryRows = normalizeInquiryRows(data);
+          const conversationRows = normalizeConversationRows(data);
           const userIdSet = new Set<string>();
-          for (const row of inquiryRows) {
-            if (row.sender_id) {
-              userIdSet.add(row.sender_id);
-            }
-            if (row.recipient_id) {
-              userIdSet.add(row.recipient_id);
-            }
+          for (const row of conversationRows) {
+            if (row.buyer_id) userIdSet.add(row.buyer_id);
+            if (row.seller_id) userIdSet.add(row.seller_id);
           }
           const userIds = Array.from(userIdSet);
 
           let profileNames: Record<string, string> = {};
           if (userIds.length > 0) {
-            const { data: profiles } = await supabase
-              .from("public_profiles")
-              .select("id, full_name")
-              .in("id", userIds);
+            const { data: participantProfiles } = await supabase.rpc(
+              "get_inquiry_participant_profiles",
+            );
             if (!isCancelled) {
-              profileNames = mapProfileNames(profiles);
+              const requestedProfiles = Array.isArray(participantProfiles)
+                ? participantProfiles.filter((profile) => {
+                    const id = (profile as { id?: unknown }).id;
+                    return typeof id === "string" && userIdSet.has(id);
+                  })
+                : [];
+              profileNames = mapProfileNames(requestedProfiles, t("user"));
             }
           }
 
           if (!isCancelled) {
-            const conversations = mapInquiriesToConversations(
-              inquiryRows,
+            const conversations = mapInquiryThreadsToConversations(
+              conversationRows,
               userId,
               profileNames,
               {
-                fallbackCarTitle: inlineCopy.fallbackCarTitle,
-                incomingLabel: inlineCopy.incomingLabel,
-                outgoingLabel: inlineCopy.outgoingLabel,
+                fallbackCarTitle: t("messageFallbackListing"),
+                incomingLabel: t("messageBuyerLabel"),
+                outgoingLabel: t("messageSellerLabel"),
+                userLabel: t("messageYouLabel"),
               },
             );
 
@@ -2120,7 +2274,7 @@ function useMessagesTabView() {
     return () => {
       isCancelled = true;
     };
-  }, [inlineCopy, supabase, userId, reloadToken]);
+  }, [supabase, t, userId, reloadToken]);
 
   const activeConversation = messagesState.activeConversation
     ? messagesState.conversations.find(
@@ -2143,12 +2297,7 @@ function useMessagesTabView() {
   }, [activeConversation]);
 
   useEffect(() => {
-    updateMessageUiState((current) => ({
-      ...current,
-      replyMessage: "",
-      replyCaptchaToken: null,
-      captchaInstanceKey: current.captchaInstanceKey + 1,
-    }));
+    updateMessageUiState({ replyMessage: "" });
   }, [messagesState.activeConversation]);
 
   const markConversationRead = useCallback(
@@ -2158,102 +2307,172 @@ function useMessagesTabView() {
       updateMessagesState((prev) => ({
         ...prev,
         conversations: prev.conversations.map((conv) =>
-          conv.id === conversationId ? { ...conv, unread: 0 } : conv,
+          conv.id === conversationId
+            ? {
+                ...conv,
+                unread: 0,
+                messages: conv.messages.map((message) =>
+                  message.direction === "incoming"
+                    ? { ...message, isRead: true }
+                    : message,
+                ),
+              }
+            : conv,
         ),
       }));
 
-      await supabase.from("inquiries").update({ is_read: true }).eq("id", conversationId);
+      const response = await fetch("/api/inquiries", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...createCsrfHeaders(),
+        },
+        body: JSON.stringify({ action: "read", conversationId }),
+      });
+      if (!response.ok) requestMessagesReload();
     },
-    [supabase],
+    [],
   );
 
+  useEffect(() => {
+    if (activeConversation?.unread && (isDesktopMessagesLayout || isMobileConversationOpen)) {
+      void markConversationRead(activeConversation.id, activeConversation.unread);
+    }
+  }, [
+    activeConversation,
+    isDesktopMessagesLayout,
+    isMobileConversationOpen,
+    markConversationRead,
+  ]);
+
+  useEffect(() => {
+    const history = messageHistoryRef.current;
+    if (!history) return;
+    const animationFrame = window.requestAnimationFrame(() => {
+      history.scrollTop = history.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [activeConversation?.id, activeConversation?.messages.length]);
+
   const sendReply = useCallback(async () => {
-    if (!activeConversation?.adId || !activeConversation.counterpartyId) {
-      toast.error(inlineCopy.cannotReply);
+    if (!activeConversation) {
+      toast.error(t("messageCannotReply"));
       return;
     }
 
-    if (!replyMessage.trim()) {
-      return;
-    }
-
-    if (!replyCaptchaToken) {
-      toast.error(inlineCopy.confirmCaptcha);
-      return;
-    }
+    const normalizedReply = replyMessage.trim();
+    if (!normalizedReply) return;
 
     updateMessageUiState({ isSendingReply: true });
     try {
       const response = await fetch("/api/inquiries", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...createCsrfHeaders(),
+        },
         body: JSON.stringify({
-          adId: activeConversation.adId,
-          recipientId: activeConversation.counterpartyId,
-          message: replyMessage,
-          captchaToken: replyCaptchaToken,
+          conversationId: activeConversation.id,
+          message: normalizedReply,
         }),
       });
 
       const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
+        | { error?: string; messageId?: string }
         | null;
 
       if (!response.ok) {
-        toast.error(payload?.error || inlineCopy.replyFailed);
+        toast.error(payload?.error || t("messageReplyFailed"));
         return;
       }
 
-      toast.success(inlineCopy.replySent);
-      updateMessageUiState((current) => ({
-        ...current,
-        replyMessage: "",
-      }));
-      requestMessagesReload();
+      const createdAt = new Date().toISOString();
+      const messageId = payload?.messageId || `pending-${createdAt}`;
+      updateMessagesState((current) => {
+        const updated = current.conversations.find(
+          (conversation) => conversation.id === activeConversation.id,
+        );
+        if (!updated) return current;
+
+        const updatedConversation: MessageConversation = {
+          ...updated,
+          lastMessage: normalizedReply,
+          lastMessageTime: createdAt,
+          lastDirection: "outgoing",
+          messages: [
+            ...updated.messages,
+            {
+              id: messageId,
+              direction: "outgoing",
+              senderName: t("messageYouLabel"),
+              body: normalizedReply,
+              createdAt,
+              isRead: false,
+            },
+          ],
+        };
+
+        return {
+          ...current,
+          conversations: [
+            updatedConversation,
+            ...current.conversations.filter(
+              (conversation) => conversation.id !== activeConversation.id,
+            ),
+          ],
+        };
+      });
+      updateMessageUiState({ replyMessage: "" });
+      toast.success(t("messageReplySent"));
     } catch {
-      toast.error(inlineCopy.replyFailed);
+      toast.error(t("messageReplyFailed"));
     } finally {
-      updateMessageUiState((current) => ({
-        ...current,
-        replyCaptchaToken: null,
-        captchaInstanceKey: current.captchaInstanceKey + 1,
-        isSendingReply: false,
-      }));
+      updateMessageUiState({ isSendingReply: false });
     }
-  }, [activeConversation, inlineCopy, replyCaptchaToken, replyMessage]);
+  }, [activeConversation, replyMessage, t]);
 
-  const handleDeleteMessage = useCallback(async () => {
-    if (!activeConversation?.inquiryId) return;
+  const handleArchiveConversation = useCallback(async () => {
+    if (!activeConversation) return;
 
-    const confirmed = window.confirm(inlineCopy.confirmDeleteMessage);
+    const confirmed = window.confirm(t("messageConfirmArchive"));
     if (!confirmed) return;
 
-    updateMessageUiState({ isDeletingMessage: true });
+    updateMessageUiState({ isArchivingConversation: true });
     try {
       const response = await fetch(
-        `/api/inquiries?inquiryId=${encodeURIComponent(activeConversation.inquiryId)}`,
-        { method: "DELETE" },
+        `/api/inquiries?conversationId=${encodeURIComponent(activeConversation.id)}`,
+        { method: "DELETE", headers: createCsrfHeaders() },
       );
       const payload = (await response.json().catch(() => null)) as
         | { error?: string }
         | null;
 
       if (!response.ok) {
-        toast.error(payload?.error || inlineCopy.deleteFailed);
+        toast.error(payload?.error || t("messageArchiveFailed"));
         return;
       }
 
-      toast.success(inlineCopy.messageDeleted);
-      requestMessagesReload();
+      updateMessagesState((current) => {
+        const remaining = current.conversations.filter(
+          (conversation) => conversation.id !== activeConversation.id,
+        );
+        return {
+          ...current,
+          conversations: remaining,
+          activeConversation: remaining[0]?.id ?? null,
+        };
+      });
+      updateMessageUiState({ isMobileConversationOpen: false });
+      toast.success(t("messageConversationArchived"));
     } catch {
-      toast.error(inlineCopy.deleteFailed);
+      toast.error(t("messageArchiveFailed"));
     } finally {
-      updateMessageUiState({ isDeletingMessage: false });
+      updateMessageUiState({ isArchivingConversation: false });
     }
-  }, [activeConversation, inlineCopy]);
+  }, [activeConversation, t]);
 
   const handleQualificationToggle = useCallback(async () => {
-    if (!activeConversation?.inquiryId || !activeConversation.adId) return;
+    if (!activeConversation?.adId) return;
     if (!activeConversation.canQualify) return;
 
     updateMessageUiState({ isUpdatingQualification: true });
@@ -2261,9 +2480,13 @@ function useMessagesTabView() {
       const nextQualified = !activeConversation.isQualified;
       const response = await fetch("/api/inquiries", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...createCsrfHeaders(),
+        },
         body: JSON.stringify({
-          inquiryId: activeConversation.inquiryId,
+          action: "qualification",
+          conversationId: activeConversation.id,
           isQualified: nextQualified,
         }),
       });
@@ -2279,7 +2502,7 @@ function useMessagesTabView() {
         | null;
 
       if (!response.ok) {
-        toast.error(payload?.error || inlineCopy.leadUpdateFailed);
+        toast.error(payload?.error || t("messageLeadUpdateFailed"));
         return;
       }
 
@@ -2287,7 +2510,7 @@ function useMessagesTabView() {
       updateMessagesState((prev) => ({
         ...prev,
         conversations: prev.conversations.map((conversation) =>
-          conversation.id === activeConversation.inquiryId
+          conversation.id === activeConversation.id
             ? {
                 ...conversation,
                 isQualified: resolvedQualified,
@@ -2300,7 +2523,7 @@ function useMessagesTabView() {
       if (resolvedQualified) {
         if (!payload?.wasQualifiedBefore) {
           trackAnalyticsEvent("lead_qualified", {
-            leadId: activeConversation.inquiryId,
+            leadId: activeConversation.id,
             adId: activeConversation.adId,
             qualificationMethod: "seller_dashboard_manual",
           });
@@ -2310,16 +2533,16 @@ function useMessagesTabView() {
         toast.success(t("leadQualificationRemoved"));
       }
     } catch {
-      toast.error(inlineCopy.leadUpdateFailed);
+      toast.error(t("messageLeadUpdateFailed"));
     } finally {
       updateMessageUiState({ isUpdatingQualification: false });
     }
-  }, [activeConversation, inlineCopy, t]);
+  }, [activeConversation, t]);
 
   const handleReplyKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
-      if (!isSendingReply && replyMessage.trim() && replyCaptchaToken) {
+      if (!isSendingReply && replyMessage.trim()) {
         void sendReply();
       }
     }
@@ -2351,7 +2574,7 @@ function useMessagesTabView() {
           }}
           className="market-action-primary px-5 py-2 text-sm"
         >
-          Retry
+          {t("messageRetry")}
         </button>
       </div>
     );
@@ -2372,87 +2595,107 @@ function useMessagesTabView() {
   }
 
   return (
-    <div className="grid min-w-0 gap-6 lg:grid-cols-3">
-      <div
-        className={`${isMobileConversationOpen ? "hidden lg:block" : "block"} lg:col-span-1 min-w-0 space-y-2`}
+    <div className="grid min-w-0 gap-4 lg:h-[clamp(36rem,65dvh,45rem)] lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]">
+      <aside
+        aria-label={t("conversationListLabel")}
+        className={`${isMobileConversationOpen ? "hidden lg:flex" : "flex"} min-w-0 flex-col overflow-hidden lg:h-full`}
       >
-        <h3 className="text-lg font-semibold text-primary mb-4">
+        <h3 className="mb-3 px-1 text-lg font-semibold text-primary">
           {t("conversations")}
         </h3>
-        {messagesState.conversations.map((conversation) => (
-          <button
-            key={conversation.id}
-            onClick={() => {
-              updateMessagesState((prev) => ({
-                ...prev,
-                activeConversation: conversation.id,
-              }));
-              updateMessageUiState({ isMobileConversationOpen: true });
-              void markConversationRead(conversation.id, conversation.unread);
-            }}
-            className={`w-full max-w-full overflow-hidden rounded-xl border p-4 text-left transition-all ${
-              messagesState.activeConversation === conversation.id
-                ? "border-accent bg-accent/5"
-                : "border-border hover:border-accent/30"
-            }`}
-          >
-            <div className="flex min-w-0 gap-3">
-              <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
-                <Image
-                  src={optimizeCloudflareImage(conversation.carPhoto, {
-                    width: 96,
-                    height: 96,
-                    fit: "cover",
-                    quality: 80,
-                    format: "auto",
-                  })}
-                  alt={conversation.carTitle}
-                  fill
-                  className="object-cover"
-                  sizes="48px"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex min-w-0 items-center justify-between gap-2">
-                  <span className="min-w-0 flex-1 truncate font-medium text-primary">
-                    {conversation.counterpartyName}
-                  </span>
-                  <span className="text-xs text-tertiary shrink-0">
-                    {formatTime(conversation.lastMessageTime)}
-                  </span>
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+          {messagesState.conversations.map((conversation) => {
+            const isSelected = messagesState.activeConversation === conversation.id;
+            return (
+              <button
+                key={conversation.id}
+                type="button"
+                aria-pressed={isSelected}
+                aria-label={`${conversation.counterpartyName}, ${conversation.carTitle}${
+                  conversation.unread > 0
+                    ? `, ${t("messageUnreadCount", { count: conversation.unread })}`
+                    : ""
+                }`}
+                onClick={() => {
+                  updateMessagesState((prev) => ({
+                    ...prev,
+                    activeConversation: conversation.id,
+                  }));
+                  updateMessageUiState({ isMobileConversationOpen: true });
+                  void markConversationRead(conversation.id, conversation.unread);
+                }}
+                className={`w-full max-w-full overflow-hidden rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                  isSelected
+                    ? "border-primary/25 bg-primary/5"
+                    : "border-border bg-background hover:border-primary/20 hover:bg-background-muted"
+                }`}
+              >
+                <div className="flex min-w-0 gap-3">
+                  <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-background-muted">
+                    <Image
+                      src={optimizeCloudflareImage(conversation.carPhoto, {
+                        width: 96,
+                        height: 96,
+                        fit: "cover",
+                        quality: 80,
+                        format: "auto",
+                      })}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <span className={`min-w-0 flex-1 truncate text-sm text-primary ${conversation.unread ? "font-bold" : "font-semibold"}`}>
+                        {conversation.counterpartyName}
+                      </span>
+                      <span className="shrink-0 text-xs text-tertiary">
+                        {formatTime(conversation.lastMessageTime)}
+                      </span>
+                    </div>
+                    <p className="truncate text-sm text-secondary">
+                      {conversation.carTitle}
+                    </p>
+                    <div className="mt-1 flex min-w-0 items-center gap-2">
+                      <p className={`min-w-0 flex-1 truncate text-sm ${conversation.unread ? "font-medium text-primary" : "text-tertiary"}`}>
+                        {conversation.lastDirection === "outgoing"
+                          ? t("messageLastFromYou", { message: conversation.lastMessage })
+                          : conversation.lastMessage}
+                      </p>
+                      {conversation.unread > 0 ? (
+                        <span
+                          className="flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-bold text-white"
+                          aria-hidden="true"
+                        >
+                          {conversation.unread}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-secondary truncate">
-                  {conversation.carTitle}
-                </p>
-                <p className="text-xs text-tertiary truncate mt-0.5">
-                  ID: {conversation.adReference}
-                </p>
-                <p className="text-sm text-tertiary truncate mt-1">
-                  {conversation.lastMessage}
-                </p>
-              </div>
-              {conversation.unread > 0 && (
-                <span className="size-5 rounded-full bg-accent text-white text-xs flex items-center justify-center shrink-0">
-                  {conversation.unread}
-                </span>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
+              </button>
+            );
+          })}
+        </div>
+      </aside>
 
-      <div className={`${isMobileConversationOpen ? "block" : "hidden lg:block"} lg:col-span-2 min-w-0`}>
+      <section
+        className={`${isMobileConversationOpen ? "block" : "hidden lg:block"} min-w-0 lg:h-full`}
+      >
         {activeConversation ? (
-          <div className="market-card flex h-full min-w-0 flex-col overflow-hidden">
-            <div className="p-4 border-b border-border">
+          <div className="market-card flex min-h-[calc(100dvh-13rem)] min-w-0 flex-col overflow-hidden lg:h-full lg:min-h-0">
+            <header className="border-b border-border p-3 sm:p-4">
               <button
                 type="button"
                 onClick={() => updateMessageUiState({ isMobileConversationOpen: false })}
-                className="market-action-secondary mb-3 inline-flex min-h-10 items-center px-3 py-1 text-xs lg:hidden"
+                className="market-action-secondary mb-3 inline-flex min-h-10 items-center gap-1.5 px-3 py-1 text-sm lg:hidden"
               >
-                {inlineCopy.backTo} {t("conversations")}
+                <ChevronLeftIcon className="size-4" />
+                {t("messageBackToConversations")}
               </button>
-              <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
+              <div className="flex min-w-0 items-start gap-3">
                 <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
                   <Image
                     src={optimizeCloudflareImage(activeConversation.carPhoto, {
@@ -2472,133 +2715,137 @@ function useMessagesTabView() {
                   <p className="truncate font-semibold text-primary">
                     {activeConversation.counterpartyName}
                   </p>
-                  <p className="break-words text-sm text-secondary">
-                    {activeConversation.carTitle}
-                  </p>
-                  <p className="text-xs text-tertiary mt-1 break-all">
-                    {inlineCopy.adId}: {activeConversation.adReference}
-                  </p>
+                  {activeConversation.listingStatus === "active" ? (
+                    <Link
+                      href={buildAdPath({
+                        id: activeConversation.adId,
+                        model: activeConversation.carTitle,
+                      })}
+                      className="mt-0.5 inline-flex max-w-full items-center gap-1.5 rounded-sm text-sm text-secondary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      <span className="truncate">{activeConversation.carTitle}</span>
+                      <ExternalLinkIcon className="size-3.5 shrink-0" />
+                      <span className="sr-only">{t("messageViewListing")}</span>
+                    </Link>
+                  ) : (
+                    <div className="mt-0.5">
+                      <p className="truncate text-sm text-secondary">
+                        {activeConversation.carTitle}
+                      </p>
+                      <p className="text-xs text-tertiary">
+                        {t("messageListingUnavailable")}
+                      </p>
+                    </div>
+                  )}
                 </div>
-                {activeConversation.direction === "incoming" && (
-                  <span className="ml-auto shrink-0 rounded-md bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
-                    {t("yourAd")}
-                  </span>
-                )}
-                {activeConversation.isQualified && (
-                  <span className="shrink-0 rounded-md bg-success/10 px-3 py-1 text-xs font-medium text-success">
-                    {t("qualifiedLead")}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="min-w-0 flex-1 p-4 overflow-y-auto min-h-[300px] bg-surface/30">
-              <div
-                className={`flex ${
-                  activeConversation.direction === "incoming"
-                    ? "justify-start"
-                    : "justify-end"
-                }`}
-              >
-                <div
-                  className={`max-w-full p-3 rounded-2xl sm:max-w-[80%] ${
-                    activeConversation.direction === "incoming"
-                      ? "bg-surface text-primary"
-                      : "bg-accent text-white"
-                  }`}
-                >
-                  <p className="text-xs uppercase tracking-wide font-semibold mb-1 opacity-80 break-words">
-                    {activeConversation.senderName}
-                  </p>
-                  <p className="text-sm break-words">{activeConversation.lastMessage}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      activeConversation.direction === "incoming"
-                        ? "text-tertiary"
-                        : "text-white/70"
-                    }`}
+                <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                  {activeConversation.sellerId === userId ? (
+                    <span className="hidden rounded-md bg-primary/7 px-2 py-1 text-xs font-medium text-primary sm:inline-flex">
+                      {t("yourAd")}
+                    </span>
+                  ) : null}
+                  {activeConversation.isQualified ? (
+                    <span className="hidden rounded-md bg-success/10 px-2 py-1 text-xs font-medium text-success sm:inline-flex">
+                      {t("qualifiedLead")}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void handleArchiveConversation()}
+                    disabled={isArchivingConversation}
+                    className="rounded-lg px-2 py-1 text-xs font-medium text-secondary transition-colors hover:bg-background-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
                   >
-                    {formatTime(activeConversation.lastMessageTime)}
-                  </p>
+                    {isArchivingConversation
+                      ? t("messageArchiving")
+                      : t("messageArchiveConversation")}
+                  </button>
                 </div>
               </div>
+              {activeConversation.canQualify ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+                  <p className="min-w-0 flex-1 text-xs text-secondary">
+                    {activeConversation.isQualified
+                      ? t("leadQualifiedHelp")
+                      : t("leadNotQualifiedHelp")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void handleQualificationToggle()}
+                    disabled={isUpdatingQualification}
+                    className="market-action-secondary min-h-9 shrink-0 px-3 py-1.5 text-xs disabled:opacity-50"
+                  >
+                    {isUpdatingQualification
+                      ? t("saving")
+                      : activeConversation.isQualified
+                        ? t("removeLeadQualification")
+                        : t("markLeadQualified")}
+                  </button>
+                </div>
+              ) : null}
+            </header>
+
+            <div
+              ref={messageHistoryRef}
+              role="log"
+              aria-live="polite"
+              aria-relevant="additions"
+              aria-label={t("messageHistoryLabel", {
+                name: activeConversation.counterpartyName,
+              })}
+              className="min-h-[18rem] min-w-0 flex-1 space-y-3 overflow-y-auto bg-surface/25 p-3 sm:p-5"
+            >
+              {activeConversation.messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.direction === "incoming" ? "justify-start" : "justify-end"}`}
+                >
+                  <div
+                    className={`max-w-[88%] rounded-2xl border px-3.5 py-2.5 text-primary sm:max-w-[75%] ${
+                      message.direction === "incoming"
+                        ? "border-border bg-background"
+                        : "border-primary/10 bg-primary/[0.07]"
+                    }`}
+                    aria-label={`${message.senderName}, ${formatTime(message.createdAt)}`}
+                  >
+                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                      {message.body}
+                    </p>
+                    <p className="mt-1 text-right text-[11px] text-tertiary">
+                      {formatTime(message.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div className="min-w-0 p-4 border-t border-border bg-background-muted/60 space-y-3">
+            <div className="sticky bottom-0 min-w-0 space-y-2 border-t border-border bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
+              <label htmlFor="dashboard-reply-message" className="sr-only">
+                {t("messageReplyPlaceholder")}
+              </label>
               <textarea
                 id="dashboard-reply-message"
                 name="dashboard-reply-message"
-                rows={3}
+                rows={2}
+                maxLength={2000}
                 value={replyMessage}
                 onChange={(event) => updateMessageUiState({ replyMessage: event.target.value })}
                 onKeyDown={handleReplyKeyDown}
-                placeholder={inlineCopy.replyPlaceholder}
-                className="input w-full resize-none"
+                placeholder={t("messageReplyPlaceholder")}
+                className="input min-h-[4.5rem] w-full resize-y"
               />
-              <div className="rounded-xl border border-border bg-background p-3">
-                <p className="mb-2 text-xs text-secondary">
-                  {inlineCopy.confirmCaptcha}
-                </p>
-                <TurnstileCaptcha
-                  key={`dashboard-reply-${captchaInstanceKey}`}
-                  onTokenChange={(token) => updateMessageUiState({ replyCaptchaToken: token })}
-                  action="inquiry_submit"
-                />
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs text-secondary">
-                    {inlineCopy.enterToSend}
-                  </p>
-                  {activeConversation.canQualify ? (
-                    <p className="mt-1 text-xs text-secondary">
-                      {activeConversation.isQualified
-                        ? t("leadQualifiedHelp")
-                        : t("leadNotQualifiedHelp")}
-                    </p>
-                  ) : null}
-                  {!replyCaptchaToken ? (
-                    <p className="mt-1 text-xs text-accent">
-                      {inlineCopy.captchaEnablesSend}
-                    </p>
-                  ) : null}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0 text-xs text-secondary">
+                  <p>{t("messageSendShortcut")}</p>
+                  <p className="mt-0.5 text-tertiary">{t("messageReplyProtection")}</p>
                 </div>
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                  {activeConversation.canQualify ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleQualificationToggle()}
-                      disabled={isUpdatingQualification}
-                    className={`market-action-secondary w-full px-4 py-2 text-sm disabled:opacity-50 sm:w-auto ${
-                        activeConversation.isQualified
-                          ? "border border-success/30 text-success hover:bg-success/5"
-                          : "border border-border text-primary hover:bg-background"
-                      }`}
-                    >
-                      {isUpdatingQualification
-                        ? t("saving")
-                        : activeConversation.isQualified
-                          ? t("removeLeadQualification")
-                          : t("markLeadQualified")}
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => void sendReply()}
-                    disabled={isSendingReply || !replyMessage.trim() || !replyCaptchaToken}
-                    className="market-action-primary w-full px-4 py-2 text-sm disabled:opacity-50 sm:w-auto"
-                  >
-                    {isSendingReply ? inlineCopy.sending : inlineCopy.reply}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDeleteMessage()}
-                    disabled={isDeletingMessage}
-                    className="market-action-secondary w-full border-error/30 px-4 py-2 text-sm text-error hover:bg-error/5 disabled:opacity-50 sm:w-auto"
-                  >
-                    {isDeletingMessage ? inlineCopy.deleting : inlineCopy.deleteMessage}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => void sendReply()}
+                  disabled={isSendingReply || !replyMessage.trim()}
+                  className="market-action-primary min-h-11 w-full shrink-0 px-5 py-2 text-sm disabled:opacity-50 sm:w-auto"
+                >
+                  {isSendingReply ? t("messageSending") : t("messageReply")}
+                </button>
               </div>
             </div>
           </div>
@@ -2610,7 +2857,7 @@ function useMessagesTabView() {
             </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
@@ -2853,7 +3100,7 @@ function SettingsPersonalDetailsSection({
         <button
           type="submit"
           disabled={isSaving || !isPhoneDirty}
-          className="market-action-account px-6 py-2.5 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-secondary disabled:opacity-100"
+          className="market-action-account px-6 py-2.5 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-text-secondary disabled:opacity-100"
         >
           {isSaving ? tCommon("loading") : t("saveChanges")}
         </button>
@@ -3002,7 +3249,7 @@ function SettingsSecuritySection({
           <button
             type="submit"
             disabled={isSubmitDisabled}
-            className="market-action-account px-6 py-2.5 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-secondary disabled:opacity-100"
+            className="market-action-account px-6 py-2.5 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-text-secondary disabled:opacity-100"
           >
             {isUpdatingPassword ? tCommon("loading") : t("changePassword")}
           </button>
@@ -3151,7 +3398,7 @@ function SettingsDangerZoneSection({
               <button
                 type="submit"
                 disabled={isDeletingAccount || !isDeleteConfirmed}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-error bg-error px-5 py-2.5 font-semibold text-white transition-colors hover:bg-error/90 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-secondary disabled:opacity-100"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-error bg-error px-5 py-2.5 font-semibold text-white transition-colors hover:bg-error/90 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-text-secondary disabled:opacity-100"
               >
                 {isDeletingAccount ? tCommon("loading") : t("deleteAccount")}
               </button>
@@ -3246,7 +3493,7 @@ function SettingsMfaDialog({
             <button
               type="submit"
               disabled={state.isVerifying || !isCodeValid}
-              className="market-action-account px-5 py-2.5 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-secondary disabled:opacity-100"
+              className="market-action-account px-5 py-2.5 disabled:cursor-not-allowed disabled:border-border disabled:bg-background-muted disabled:text-text-secondary disabled:opacity-100"
             >
               {state.isVerifying ? tCommon("loading") : t("verifyMfaAndChangePassword")}
             </button>

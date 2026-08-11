@@ -6,9 +6,7 @@ import {
   transformCarToAlgoliaRecord,
 } from "@/lib/algolia";
 import {
-  getCarsIndexSettings,
-  getCarsReplicaSettings,
-  getCarsSynonymBatch,
+  configureCarsIndex,
 } from "@/lib/algolia/admin-config";
 import { rejectWhenRuntimeEnvMissing } from "@/lib/api/runtime-env";
 import { assertRuntimeEnvConfigured, getTrimmedEnv } from "@/lib/env";
@@ -168,24 +166,7 @@ export async function POST(request: NextRequest) {
       from += PAGE_SIZE;
     }
 
-    await algolia.customPut({
-      path: `1/indexes/${encodeURIComponent(carsIndexName)}/settings`,
-      body: getCarsIndexSettings(carsIndexName),
-    });
-
-    for (const replica of getCarsReplicaSettings()) {
-      await algolia.customPut({
-        path: `1/indexes/${encodeURIComponent(`${carsIndexName}${replica.suffix}`)}/settings`,
-        body: {
-          ranking: replica.ranking,
-        },
-      });
-    }
-
-    await algolia.customPost({
-      path: `1/indexes/${encodeURIComponent(carsIndexName)}/synonyms/batch`,
-      body: getCarsSynonymBatch().requests.map((request) => request.body) as unknown as Record<string, unknown>,
-    });
+    await configureCarsIndex(algolia, carsIndexName);
 
     const replaceTasks = await algolia.replaceAllObjects({
       indexName: carsIndexName,

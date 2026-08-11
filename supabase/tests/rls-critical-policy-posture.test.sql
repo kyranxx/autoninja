@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(25);
+select plan(37);
 
 select is(
   (
@@ -133,13 +133,123 @@ select ok(
     from pg_policies
     where schemaname = 'public'
       and tablename = 'inquiries'
-      and policyname = 'Users can send inquiries'
+      and policyname = 'Participants can send inquiry messages'
       and cmd = 'INSERT'
       and roles @> array['authenticated'::name]
-      and with_check ilike '%sender_id%auth.uid()%'
-      and with_check not ilike '%recipient_id%'
+      and with_check ilike '%can_send_inquiry_message%'
+      and with_check ilike '%sender_id%'
+      and with_check ilike '%conversation_id%'
+      and with_check ilike '%recipient_id%'
   ),
-  'authenticated inquiry senders may address themselves'
+  'inquiry inserts are bound to the signed-in thread participant and recipient'
+);
+
+select is(
+  has_function_privilege(
+    'anon',
+    'public.can_send_inquiry_message(uuid,uuid,uuid,uuid)',
+    'EXECUTE'
+  ),
+  false,
+  'anonymous users cannot invoke the inquiry membership predicate'
+);
+
+select is(
+  has_function_privilege(
+    'authenticated',
+    'public.can_send_inquiry_message(uuid,uuid,uuid,uuid)',
+    'EXECUTE'
+  ),
+  true,
+  'authenticated inserts can invoke the scoped inquiry membership predicate'
+);
+
+select is(
+  (
+    select provolatile::text
+    from pg_proc
+    where oid = 'public.can_send_inquiry_message(uuid,uuid,uuid,uuid)'::regprocedure
+  ),
+  'v',
+  'inquiry membership checks can see the conversation created by the same statement trigger'
+);
+
+select ok(
+  exists(
+    select 1
+    from pg_class
+    where relnamespace = 'public'::regnamespace
+      and relname = 'inquiry_conversations'
+      and relrowsecurity
+  ),
+  'inquiry conversations have row-level security enabled'
+);
+
+select ok(
+  exists(
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'inquiry_conversations'
+      and policyname = 'Participants can view inquiry conversations'
+      and cmd = 'SELECT'
+      and roles @> array['authenticated'::name]
+      and qual ilike '%buyer_id%auth.uid()%'
+      and qual ilike '%seller_id%auth.uid()%'
+  ),
+  'only conversation participants can read their threads'
+);
+
+select is(
+  has_table_privilege('authenticated', 'public.inquiry_conversations', 'INSERT'),
+  false,
+  'authenticated clients cannot create empty conversation rows directly'
+);
+
+select ok(
+  exists(
+    select 1
+    from pg_trigger
+    where tgrelid = 'public.inquiries'::regclass
+      and tgname = 'trg_00_ensure_inquiry_conversation'
+      and not tgisinternal
+  ),
+  'legacy and current message inserts resolve a conversation before constraints'
+);
+
+select is(
+  has_column_privilege('authenticated', 'public.inquiries', 'is_read', 'UPDATE'),
+  true,
+  'the legacy client can still mark received messages as read during rollout'
+);
+
+select is(
+  has_column_privilege('authenticated', 'public.inquiries', 'message', 'UPDATE'),
+  false,
+  'legacy compatibility does not permit message content changes'
+);
+
+select ok(
+  exists(
+    select 1
+    from pg_trigger
+    where tgrelid = 'public.inquiries'::regclass
+      and tgname = 'trg_archive_legacy_inquiry_delete'
+      and not tgisinternal
+  ),
+  'legacy message deletion is converted to participant-side conversation archive'
+);
+
+select is(
+  has_function_privilege('anon', 'public.get_inquiry_participant_profiles()', 'EXECUTE'),
+  false,
+  'anonymous users cannot enumerate inquiry participant profiles'
+);
+
+select is(
+  has_function_privilege('authenticated', 'public.get_inquiry_participant_profiles()', 'EXECUTE'),
+  true,
+  'authenticated participants can resolve safe counterpart display names'
 );
 
 select ok(

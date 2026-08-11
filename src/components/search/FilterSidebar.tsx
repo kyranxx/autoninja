@@ -123,6 +123,26 @@ export function mergePersistentRefinementOptions(
   return Array.from(mergedByKey.values()).sort(sortRefinementOptions);
 }
 
+export function getVisibleBrandRefinementOptions(
+  catalogOptions: RefinementOption[],
+  liveOptions: RefinementOption[],
+  selectedLabels: string[],
+  searchQuery: string,
+): RefinementOption[] {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const source = normalizedQuery
+    ? mergePersistentRefinementOptions(catalogOptions, liveOptions, selectedLabels)
+    : mergePersistentRefinementOptions([], liveOptions, selectedLabels);
+
+  if (!normalizedQuery) {
+    return source;
+  }
+
+  return source.filter((item) =>
+    item.label.toLowerCase().includes(normalizedQuery),
+  );
+}
+
 function RefinementToggleButton({
   item,
   prefix,
@@ -354,15 +374,14 @@ export function FilterSidebar({
         )}
       </FilterSection>
 
-      <FilterSection title={tFilters("fuelTitle")} collapsible>
-        <CustomRefinementList
-          attribute="fuel"
-          idScope={idScope}
-          labelFormatter={(value) =>
-            tFuel(value.toLowerCase() as Parameters<typeof tFuel>[0]) || value
-          }
-        />
-      </FilterSection>
+      <RefinementFilterSection
+        attribute="fuel"
+        idScope={idScope}
+        title={tFilters("fuelTitle")}
+        labelFormatter={(value) =>
+          tFuel(value.toLowerCase() as Parameters<typeof tFuel>[0]) || value
+        }
+      />
 
       <FilterSection title={tFilters("priceTitle")}>
         <PriceRangeInput attribute="price_eur" idScope={idScope} />
@@ -380,32 +399,32 @@ export function FilterSidebar({
         <CustomRangeInput attribute="power_kw" idScope={idScope} />
       </FilterSection>
 
-      <FilterSection title={tHomeSearch("locationOption")} collapsible>
-        <CustomRefinementList attribute="location_city" idScope={idScope} />
-      </FilterSection>
+      <RefinementFilterSection
+        attribute="location_city"
+        idScope={idScope}
+        title={tHomeSearch("locationOption")}
+      />
 
-      <FilterSection title={tFilters("transmissionTitle")} collapsible>
-        <CustomRefinementList
-          attribute="transmission"
-          idScope={idScope}
-          labelFormatter={(value) =>
-            tTransmission(
-              value.toLowerCase() as Parameters<typeof tTransmission>[0],
-            ) || value
-          }
-        />
-      </FilterSection>
+      <RefinementFilterSection
+        attribute="transmission"
+        idScope={idScope}
+        title={tFilters("transmissionTitle")}
+        labelFormatter={(value) =>
+          tTransmission(
+            value.toLowerCase() as Parameters<typeof tTransmission>[0],
+          ) || value
+        }
+      />
 
-      <FilterSection title={tFilters("bodyTypeTitle")} collapsible>
-        <CustomRefinementList
-          attribute="body_style"
-          idScope={idScope}
-          labelFormatter={(value) =>
-            tBodyType(value.toLowerCase() as Parameters<typeof tBodyType>[0]) ||
-            value
-          }
-        />
-      </FilterSection>
+      <RefinementFilterSection
+        attribute="body_style"
+        idScope={idScope}
+        title={tFilters("bodyTypeTitle")}
+        labelFormatter={(value) =>
+          tBodyType(value.toLowerCase() as Parameters<typeof tBodyType>[0]) ||
+          value
+        }
+      />
 
       <FilterSection title={tFilters("other")} collapsible defaultOpen={false}>
         <div className="space-y-2">
@@ -972,27 +991,16 @@ function AllBrandsRefinementList({
       })),
     [brandNames],
   );
-  const visibleItems = useMemo(
+  const mergedItems = useMemo(
     () =>
-      mergePersistentRefinementOptions(
+      getVisibleBrandRefinementOptions(
         catalogBrandItems,
         currentItems,
         selectedBrandLabels,
+        searchQuery,
       ),
-    [catalogBrandItems, currentItems, selectedBrandLabels],
+    [catalogBrandItems, currentItems, searchQuery, selectedBrandLabels],
   );
-
-  const mergedItems = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
-    if (!normalizedQuery) {
-      return visibleItems;
-    }
-
-    return visibleItems.filter((item) =>
-      item.label.toLowerCase().includes(normalizedQuery),
-    );
-  }, [searchQuery, visibleItems]);
 
   return (
     <div className="space-y-3">
@@ -1073,5 +1081,48 @@ function CustomRefinementList({
         ))}
       </ul>
     </div>
+  );
+}
+
+function RefinementFilterSection({
+  attribute,
+  idScope,
+  title,
+  labelFormatter,
+  collapsible = true,
+}: {
+  attribute: string;
+  idScope: string;
+  title: string;
+  labelFormatter?: (value: string) => string;
+  collapsible?: boolean;
+}) {
+  const { items, refine } = useRefinementList({
+    attribute,
+    limit: 100,
+    sortBy: ["count:desc", "name:asc"],
+  });
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <FilterSection title={title} collapsible={collapsible}>
+      <div className="max-h-64 overflow-y-auto pr-1">
+        <ul className="space-y-1">
+          {items.map((item) => (
+            <li key={item.value}>
+              <RefinementToggleButton
+                item={item}
+                prefix={`${idScope}-${attribute}-filter`}
+                label={labelFormatter ? labelFormatter(item.label) : item.label}
+                onToggle={() => refine(item.value)}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+    </FilterSection>
   );
 }

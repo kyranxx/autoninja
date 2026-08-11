@@ -78,14 +78,21 @@ export function Step1Category({
         <p className="text-secondary">{t("whatVehicleType")}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <fieldset
+        className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4"
+        aria-describedby={errors.category ? "listing-category-error" : undefined}
+      >
+        <legend className="sr-only">{t("selectCategory")}</legend>
         {CATEGORY_OPTIONS.map((category) => (
           <button
             key={category.id}
             type="button"
+            role="radio"
+            aria-label={t(category.labelKey)}
+            aria-checked={formData.category === category.id}
             data-testid={`listing-category-${category.id}`}
             onClick={() => updateFormData("category", category.id)}
-            className={`flex flex-col items-center gap-3 rounded-2xl border-2 p-6 transition-all ${
+            className={`flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition-all sm:flex-col sm:gap-3 sm:p-6 sm:text-center ${
               formData.category === category.id
                 ? "border-accent bg-accent/5"
                 : "border-border hover:border-accent/30 hover:bg-surface"
@@ -94,15 +101,15 @@ export function Step1Category({
             <div className="rounded-xl border border-border-subtle bg-background-muted p-3 text-accent">
               <CategoryGlyph categoryId={category.id} />
             </div>
-            <div className="text-center">
+            <div className="min-w-0 sm:text-center">
               <p className="font-semibold text-primary">{t(category.labelKey)}</p>
               <p className="mt-1 text-sm text-secondary">{t(category.descKey)}</p>
             </div>
           </button>
         ))}
-      </div>
+      </fieldset>
 
-      {errors.category && <p className="text-sm text-error">{errors.category}</p>}
+      {errors.category && <p id="listing-category-error" className="text-sm text-error">{errors.category}</p>}
     </div>
   );
 }

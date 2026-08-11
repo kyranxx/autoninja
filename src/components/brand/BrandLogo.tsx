@@ -33,7 +33,17 @@ export function BrandLogo({
         >
           Auto
         </span>
-        <span className="text-[var(--color-accent)]">Ninja</span>
+        <span
+          className={cn(
+            responsiveInverse
+              ? "text-brand-accent-on-dark md:text-brand-accent-on-light"
+              : inverse
+                ? "text-brand-accent-on-dark"
+                : "text-brand-accent-on-light",
+          )}
+        >
+          Ninja
+        </span>
         {showDomain ? (
           <span className={cn("tracking-normal", inverse ? "text-white" : "text-text-primary")}>
             {marketCode === "SK" ? ".sk" : ".ro"}

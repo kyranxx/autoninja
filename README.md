@@ -129,3 +129,7 @@ See `docs/market-extension-guide.md` before connecting another country TLD.
 - Billing checkout and webhook processing rely on Stripe.
 - Transactional emails rely on Resend.
 - Local agent behavior lives in `AGENTS.md`.
+
+## Operations map
+
+Open [`public/autoninja-ops.html`](public/autoninja-ops.html) locally, or use `/autoninja-ops.html` on a deployed market domain, for the architecture diagram, provider consoles, important subpages, and app health/admin shortcuts.

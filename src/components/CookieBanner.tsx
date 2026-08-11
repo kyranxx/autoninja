@@ -169,14 +169,17 @@ export default function CookieBanner() {
   if (!state.isReady || !state.isVisible) return null;
 
   return (
-    <div className="fixed bottom-2 left-2 z-50 w-[calc(100vw-1rem)] max-w-96 sm:bottom-4 sm:left-4 sm:w-[min(92vw,24rem)]">
+    <aside
+      aria-label={t("title")}
+      className="fixed bottom-2 left-2 z-50 w-[calc(100vw-1rem)] max-w-96 sm:bottom-4 sm:left-4 sm:w-[min(92vw,24rem)]"
+    >
       <div className="overflow-hidden rounded-xl border border-accent/20 bg-background shadow-2xl">
         {!state.showSettings ? (
           <div className="p-3 sm:p-4">
             <div className="flex flex-col gap-2.5 sm:gap-3">
               <div>
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="rounded-md bg-accent/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-accent">
+                  <span className="rounded-md bg-accent/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-brand-accent-on-light">
                     Cookies
                   </span>
                   <h3 className="text-sm font-semibold text-primary">{t("title")}</h3>
@@ -185,7 +188,7 @@ export default function CookieBanner() {
                   {t("description")}{" "}
                   <Link
                     href="/ochrana-udajov"
-                    className="text-accent underline decoration-1 underline-offset-2"
+                    className="text-brand-accent-on-light underline decoration-1 underline-offset-2"
                   >
                     {tCommon("learnMore")}
                   </Link>
@@ -207,7 +210,7 @@ export default function CookieBanner() {
                 </button>
                 <button
                   onClick={acceptAll}
-                  className="min-h-10 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-hover"
+                  className="min-h-10 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
                 >
                   {t("accept")}
                 </button>
@@ -305,6 +308,6 @@ export default function CookieBanner() {
           </div>
         )}
       </div>
-    </div>
+    </aside>
   );
 }

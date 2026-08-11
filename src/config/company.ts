@@ -3,8 +3,6 @@ export const COMPANY_INFO = {
   infoEmail: "info@autoninja.sk",
   supportEmail: "support@autoninja.sk",
   privacyEmail: "gdpr@autoninja.sk",
-  phoneDisplay: "+421 900 123 456",
-  phoneHref: "+421900123456",
   streetAddress: "Karpatské námestie 10A",
   postalCode: "831 06",
   city: "Bratislava - mestská časť Rača",
