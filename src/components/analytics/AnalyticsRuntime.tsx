@@ -84,8 +84,10 @@ function ensureGtag() {
   window.dataLayer = window.dataLayer || [];
   window.gtag =
     window.gtag ||
-    function gtag(...args: unknown[]) {
-      window.dataLayer?.push(args);
+    function gtag() {
+      // Google Tag's command queue expects the native Arguments object.
+      // eslint-disable-next-line prefer-rest-params
+      window.dataLayer?.push(arguments);
     };
 }
 

@@ -86,8 +86,12 @@ describe("AnalyticsRuntime", () => {
     });
 
     await waitFor(() => {
-      const dataLayer = (window as Window & { dataLayer?: unknown[][] }).dataLayer;
-      expect(dataLayer).toContainEqual([
+      const dataLayer = (window as Window & { dataLayer?: unknown[] }).dataLayer;
+      const pageViewCommand = dataLayer
+        ?.map((command) => Array.from(command as ArrayLike<unknown>))
+        .find((command) => command[0] === "event" && command[1] === "page_view");
+
+      expect(pageViewCommand).toEqual([
         "event",
         "page_view",
         expect.objectContaining({
@@ -95,6 +99,7 @@ describe("AnalyticsRuntime", () => {
           send_to: "G-AUTONINJA",
         }),
       ]);
+      expect(Object.prototype.toString.call(dataLayer?.[0])).toBe("[object Arguments]");
     });
   });
 
