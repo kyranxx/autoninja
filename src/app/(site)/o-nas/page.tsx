@@ -9,7 +9,6 @@ import {
   MarketplaceLinkButton,
   MarketplacePageShell,
   MarketplaceSection,
-  MarketplaceStatCard,
 } from "@/components/ui/MarketplacePage";
 import { CheckCircleIcon, LockIcon, SpeedometerIcon } from "@/components/ui/Icons";
 import type { MarketCode } from "@/config/markets";
@@ -24,9 +23,6 @@ function getAboutPageCopy(marketCode: MarketCode) {
       description:
         "Descoperă echipa AutoNinja și misiunea noastră de a aduce o piață auto mai transparentă, sigură și corectă în România.",
       breadcrumb: "Despre noi",
-      activeValue: "Reale",
-      sellersValue: "Deschis",
-      trustValue: "Treptat",
     };
   }
 
@@ -35,9 +31,6 @@ function getAboutPageCopy(marketCode: MarketCode) {
     description:
       "Spoznajte tím AutoNinja a našu misiu prinášať transparentný, bezpečný a férový autobazár na Slovensku.",
     breadcrumb: "O nás",
-    activeValue: "Reálne",
-    sellersValue: "Otvorené",
-    trustValue: "Postupne",
   };
 }
 
@@ -102,13 +95,6 @@ export default async function AboutPage() {
               siteUrl={market.origin}
               className="mb-0"
             />
-          }
-          stats={
-            <div className="grid gap-3 sm:grid-cols-3">
-              <MarketplaceStatCard value={copy.activeValue} label={t("activeListings")} tone="accent" />
-              <MarketplaceStatCard value={copy.sellersValue} label={t("verifiedDealers")} />
-              <MarketplaceStatCard value={copy.trustValue} label={t("satisfiedCustomers")} />
-            </div>
           }
         />
 

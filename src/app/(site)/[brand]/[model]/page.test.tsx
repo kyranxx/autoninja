@@ -93,6 +93,20 @@ describe("BrandModelPage", () => {
     expect(metadata.keywords).toContain("Porsche 911 de vânzare");
   });
 
+  it("returns a real not-found result for an unknown model", async () => {
+    mocks.getModelTaxonomy.mockResolvedValue(null);
+    mocks.hasModelForBrand.mockResolvedValue(false);
+
+    await expect(
+      generateMetadata({
+        params: Promise.resolve({
+          brand: "volkswagen",
+          model: "unknown-model",
+        }),
+      }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
   it("does not link city pSEO pages before launch inventory qualifies them", async () => {
     const page = await BrandModelPage({
       params: Promise.resolve({ brand: "skoda", model: "octavia" }),

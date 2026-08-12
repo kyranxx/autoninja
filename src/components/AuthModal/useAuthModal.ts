@@ -108,11 +108,13 @@ export function useAuthModalController({
   onClose,
   initialView,
   t,
+  lockDocumentScroll = true,
 }: {
   isOpen: boolean;
   onClose: () => void;
   initialView: AuthView;
   t: (key: string, values?: Record<string, string | number>) => string;
+  lockDocumentScroll?: boolean;
 }): AuthModalController {
   const [state, dispatch] = useReducer(authReducer, initialView, createInitialState);
   const router = useRouter();
@@ -165,13 +167,17 @@ export function useAuthModalController({
     };
 
     document.addEventListener("keydown", handleEscape);
-    document.body.style.overflow = "hidden";
+    if (lockDocumentScroll) {
+      document.body.style.overflow = "hidden";
+    }
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "";
+      if (lockDocumentScroll) {
+        document.body.style.overflow = "";
+      }
     };
-  }, [isOpen, closeModal]);
+  }, [isOpen, closeModal, lockDocumentScroll]);
 
   useEffect(() => {
     if (!isOpen || !shouldAutoFocusAuthField()) return;

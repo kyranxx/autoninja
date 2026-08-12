@@ -78,7 +78,7 @@ function LoginForm({
         <button
           type="button"
           onClick={onForgotPassword}
-          className="text-sm text-accent hover:text-[var(--color-accent-hover)] hover:underline cursor-pointer transition-colors"
+          className="text-sm text-[var(--color-brand-accent-on-light)] hover:text-primary hover:underline cursor-pointer transition-colors"
         >
           {t("login.forgotPassword")}
         </button>

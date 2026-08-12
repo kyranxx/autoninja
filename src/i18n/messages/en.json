@@ -1072,6 +1072,15 @@
     "description": "The page does not exist or has been moved.",
     "backHome": "Back to home"
   },
+  "errorPage": {
+    "eyebrow": "Error",
+    "title": "Something went wrong",
+    "description": "{brand} could not finish this action. Try loading the page again or return to a safe page.",
+    "errorId": "Error ID",
+    "retry": "Try again",
+    "home": "Go to homepage",
+    "contact": "Contact support"
+  },
   "maintenance": {
     "title": "Maintenance mode",
     "description": "The site is temporarily under maintenance.",

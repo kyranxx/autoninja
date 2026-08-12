@@ -34,16 +34,6 @@ export const dynamic = "force-dynamic";
 
 const CITY_PAGE_MIN_ACTIVE_ADS = SEO_CONFIG.sitemapCityPageMinActiveAds;
 
-function buildNoindexMetadata(title = "Nenájdené"): Metadata {
-  return {
-    title,
-    robots: {
-      index: false,
-      follow: false,
-    },
-  };
-}
-
 async function getLaunchCityInventory({
   marketCode,
   brandName,
@@ -137,7 +127,7 @@ export async function generateMetadata({
   const cityData = getCityTaxonomy(city);
 
   if (!brandData || !modelData || !(await hasModelForBrand(brand, model)) || !cityData) {
-    return buildNoindexMetadata(getBrandModelCityPageCopy(market.code, "", "", "", "").notFound);
+    notFound();
   }
 
   const brandName = brandData.name;
@@ -151,7 +141,7 @@ export async function generateMetadata({
   });
 
   if (cars.length < CITY_PAGE_MIN_ACTIVE_ADS) {
-    return buildNoindexMetadata(getBrandModelCityPageCopy(market.code, "", "", "", "").notFound);
+    notFound();
   }
   const copy = getBrandModelCityPageCopy(
     market.code,

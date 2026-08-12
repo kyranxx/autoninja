@@ -11,6 +11,7 @@ export interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialView?: AuthView;
+  presentation?: "modal" | "page";
 }
 
 import { pushClass, GoogleIcon } from "./shared";
@@ -162,7 +163,7 @@ function AuthModalFooter({
           <button
             type="button"
             onClick={() => onChangeView("register")}
-            className="text-accent font-semibold hover:underline cursor-pointer"
+            className="text-[var(--color-brand-accent-on-light)] font-semibold hover:underline cursor-pointer"
           >
             {t("footer.register")}
           </button>
@@ -173,7 +174,7 @@ function AuthModalFooter({
           <button
             type="button"
             onClick={() => onChangeView("login")}
-            className="text-accent font-semibold hover:underline cursor-pointer"
+            className="text-[var(--color-brand-accent-on-light)] font-semibold hover:underline cursor-pointer"
           >
             {t("footer.login")}
           </button>
@@ -182,7 +183,7 @@ function AuthModalFooter({
         <button
           type="button"
           onClick={() => onChangeView("login")}
-          className="text-sm text-accent font-semibold hover:underline cursor-pointer"
+          className="text-sm text-[var(--color-brand-accent-on-light)] font-semibold hover:underline cursor-pointer"
         >
           {t("footer.goToLogin")}
         </button>
@@ -198,23 +199,43 @@ export default function AuthModal({
   isOpen,
   onClose,
   initialView = "login",
+  presentation = "modal",
 }: AuthModalProps) {
   const t = useTranslations("authModal");
   const { weight } = useIconWeight();
-  const controller = useAuthModalController({ isOpen, onClose, initialView, t });
+  const isPagePresentation = presentation === "page";
+  const controller = useAuthModalController({
+    isOpen,
+    onClose,
+    initialView,
+    t,
+    lockDocumentScroll: !isPagePresentation,
+  });
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        aria-label={t("aria.closeBackdrop")}
-        onClick={controller.closeModal}
-      />
+    <div
+      className={
+        isPagePresentation
+          ? "relative flex w-full items-center justify-center"
+          : "fixed inset-0 z-[200] flex items-center justify-center p-4"
+      }
+    >
+      {isPagePresentation ? null : (
+        <button
+          type="button"
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          aria-label={t("aria.closeBackdrop")}
+          onClick={controller.closeModal}
+        />
+      )}
 
-      <div className="relative w-full max-w-[860px] max-h-[92vh] bg-background-secondary rounded-2xl shadow-xl overflow-hidden animate-modal-in grid grid-cols-1 md:grid-cols-[340px_1fr] grid-rows-[1fr]">
+      <div
+        className={`relative grid w-full max-w-[860px] grid-cols-1 grid-rows-[1fr] overflow-hidden rounded-2xl border border-border bg-background-secondary shadow-xl md:grid-cols-[340px_1fr] ${
+          isPagePresentation ? "" : "max-h-[92vh] animate-modal-in"
+        }`}
+      >
         {/* Close button */}
         <button
           type="button"
@@ -229,7 +250,7 @@ export default function AuthModal({
         <BrandedPanel t={t} emphasizeLogo={controller.state.view === "reset"} />
 
         {/* Right form side */}
-        <div className="flex flex-col min-h-0 max-h-[92vh] overflow-hidden">
+        <div className={`flex min-h-0 flex-col overflow-hidden ${isPagePresentation ? "" : "max-h-[92vh]"}`}>
           {/* Mobile brand strip */}
           <MobileBrandStrip
             t={t}

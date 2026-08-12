@@ -88,17 +88,10 @@ describe("BrandModelCityPage", () => {
     mocks.getRequestMarketConfig.mockResolvedValue(getMarketConfig("SK"));
   });
 
-  it("keeps below-threshold city pSEO metadata out of the index", async () => {
-    const metadata = await generateMetadata({ params: cityParams() });
-
-    expect(metadata).toMatchObject({
-      title: "Nenájdené",
-      robots: {
-        index: false,
-        follow: false,
-      },
-    });
-    expect(metadata.alternates).toBeUndefined();
+  it("returns a real not-found result below the city inventory threshold", async () => {
+    await expect(
+      generateMetadata({ params: cityParams() }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
   it("does not link unqualified sibling city pSEO pages", async () => {

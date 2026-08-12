@@ -18,6 +18,7 @@ import {
   summarizeInventory,
 } from "@/lib/seo/programmatic-inventory";
 import {
+  getAllSeoBrandModelPairs,
   getBrandTaxonomy,
   hasModelForBrand,
   getModelTaxonomy,
@@ -31,6 +32,15 @@ import type { MarketCode } from "@/config/markets";
 // inventory at request time. Keep them out of the static build and generate
 // valid routes on demand instead.
 export const dynamic = "force-dynamic";
+export const dynamicParams = false;
+
+export async function generateStaticParams() {
+  const pairs = await getAllSeoBrandModelPairs();
+  return pairs.map(({ brandSlug, modelSlug }) => ({
+    brand: brandSlug,
+    model: modelSlug,
+  }));
+}
 
 function getBrandModelPageCopy(
   marketCode: MarketCode,
@@ -103,7 +113,7 @@ export async function generateMetadata({
   const market = await getRequestMarketConfig();
   const marketCopy = getPublicMarketCopy(market);
   if (!brand || !model) {
-    return { title: getBrandModelPageCopy(market.code, "", "").notFound };
+    notFound();
   }
 
   const [brandData, modelData] = await Promise.all([
@@ -111,30 +121,26 @@ export async function generateMetadata({
     getModelTaxonomy(brand, model),
   ]);
 
-  let metadata: Metadata = {
-    title: getBrandModelPageCopy(market.code, "", "").notFound,
-  };
-
-  if (brandData && modelData && await hasModelForBrand(brand, model)) {
-    const brandName = brandData.name;
-    const modelName = modelData.name;
-    const copy = getBrandModelPageCopy(market.code, brandName, modelName);
-
-    metadata = buildProgrammaticMetadata({
-      title: copy.title,
-      description: copy.description,
-      keywords: copy.keywords,
-      canonicalPath: `/${brand}/${model}`,
-      openGraphTitle: copy.openGraphTitle,
-      twitterTitle: copy.openGraphTitle,
-      twitterDescription: copy.twitterDescription,
-      siteUrl: market.origin,
-      siteName: market.brandName,
-      openGraphLocale: marketCopy.openGraphLocale,
-    });
+  if (!brandData || !modelData || !(await hasModelForBrand(brand, model))) {
+    notFound();
   }
 
-  return metadata;
+  const brandName = brandData.name;
+  const modelName = modelData.name;
+  const copy = getBrandModelPageCopy(market.code, brandName, modelName);
+
+  return buildProgrammaticMetadata({
+    title: copy.title,
+    description: copy.description,
+    keywords: copy.keywords,
+    canonicalPath: `/${brand}/${model}`,
+    openGraphTitle: copy.openGraphTitle,
+    twitterTitle: copy.openGraphTitle,
+    twitterDescription: copy.twitterDescription,
+    siteUrl: market.origin,
+    siteName: market.brandName,
+    openGraphLocale: marketCopy.openGraphLocale,
+  });
 }
 
 export default async function BrandModelPage({

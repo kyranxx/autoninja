@@ -17,6 +17,12 @@ import type { MarketCode } from "@/config/markets";
 // inventory at request time. Keep them out of the static build and generate
 // valid routes on demand instead.
 export const dynamic = "force-dynamic";
+export const dynamicParams = false;
+
+export async function generateStaticParams() {
+  const brands = await getAllSeoBrands();
+  return brands.map(({ slug: brand }) => ({ brand }));
+}
 
 function getBrandPageCopy(
   marketCode: MarketCode,
@@ -93,7 +99,7 @@ export async function generateMetadata({
   const marketCopy = getPublicMarketCopy(market);
 
   if (!brandData) {
-    return { title: getBrandPageCopy(market.code, "", 0).notFound };
+    notFound();
   }
   const copy = getBrandPageCopy(
     market.code,

@@ -7,6 +7,13 @@ const mocks = vi.hoisted(() => ({
   getBrandTaxonomy: vi.fn(),
   getRequestMarketConfig: vi.fn(),
   getSeoBrandSlugs: vi.fn(),
+  notFound: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+}));
+
+vi.mock("next/navigation", () => ({
+  notFound: mocks.notFound,
 }));
 
 vi.mock("@/lib/seo/programmatic-taxonomy", () => ({
@@ -48,5 +55,15 @@ describe("brand page metadata", () => {
       },
     });
     expect(metadata.keywords).toContain("Dacia de vânzare");
+  });
+
+  it("returns a real not-found result for an unknown brand", async () => {
+    mocks.getBrandTaxonomy.mockResolvedValue(null);
+
+    await expect(
+      generateMetadata({
+        params: Promise.resolve({ brand: "unknown-brand" }),
+      }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
   });
 });

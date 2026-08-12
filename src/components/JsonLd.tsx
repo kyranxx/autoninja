@@ -1,4 +1,3 @@
-import Script from "next/script";
 import { BRAND_SOCIAL_PROFILE_URLS } from "@/config/brand";
 import { COMPANY_INFO } from "@/config/company";
 import {
@@ -72,18 +71,16 @@ export function JsonLd({
 
   return (
     <>
-      <Script
+      <script
         id={createJsonLdId("organization-jsonld")}
         type="application/ld+json"
-      >
-        {organizationJson}
-      </Script>
-      <Script
+        dangerouslySetInnerHTML={{ __html: organizationJson }}
+      />
+      <script
         id={createJsonLdId("website-jsonld")}
         type="application/ld+json"
-      >
-        {websiteJson}
-      </Script>
+        dangerouslySetInnerHTML={{ __html: websiteJson }}
+      />
     </>
   );
 }
@@ -115,8 +112,10 @@ export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
   );
 
   return (
-    <Script id={scriptId} type="application/ld+json">
-      {serializeJsonLd(schema)}
-    </Script>
+    <script
+      id={scriptId}
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
+    />
   );
 }

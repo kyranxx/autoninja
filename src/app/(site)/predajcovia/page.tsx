@@ -156,13 +156,13 @@ export default async function DealersPage() {
               {copy.createDealerProfile}
             </MarketplaceLinkButton>
           }
-          stats={
+          stats={dealers.length > 0 ? (
             <div className="grid gap-3 sm:grid-cols-3">
               <MarketplaceStatCard value={dealers.length} label={copy.publishedDealers} />
               <MarketplaceStatCard value={activeAds} label={copy.activeAds} tone="accent" />
               <MarketplaceStatCard value={soldCount} label={copy.soldVehicles} tone="success" />
             </div>
-          }
+          ) : undefined}
         />
 
         <MarketplaceSection>
@@ -244,6 +244,7 @@ export default async function DealersPage() {
           )}
         </MarketplaceSection>
 
+        {dealers.length > 0 ? (
         <section className="market-soft-band p-6 text-center sm:p-8">
           <h2 className="text-xl font-semibold text-primary">{copy.dealerCtaTitle}</h2>
           <p className="mx-auto mt-2 max-w-2xl text-secondary">
@@ -255,6 +256,7 @@ export default async function DealersPage() {
             </MarketplaceLinkButton>
           </div>
         </section>
+        ) : null}
       </MarketplaceContainer>
     </MarketplacePageShell>
   );

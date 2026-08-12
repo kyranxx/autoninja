@@ -505,7 +505,7 @@ export default function DetailedSearchPageClient() {
 
         <div className="relative isolate overflow-hidden rounded-2xl border border-primary bg-primary px-4 py-4 text-white shadow-lg sm:px-7 sm:py-5">
           <div className="pointer-events-none absolute -right-12 -top-16 size-44 rounded-full bg-accent/25 blur-2xl" />
-          <h1 className="relative z-10 !text-3xl font-black leading-[1.05] tracking-tight text-white sm:!text-4xl">{t("title")}</h1>
+          <h1 className="relative z-10 !text-3xl font-black leading-[1.05] tracking-tight !text-white sm:!text-4xl">{t("title")}</h1>
         </div>
 
         <form onSubmit={submitSearch} className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-5">
@@ -600,7 +600,7 @@ export default function DetailedSearchPageClient() {
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground shadow-sm">
                       <Zap aria-hidden="true" className="size-4" />
                     </span>
-                    <p className="text-xs font-black uppercase tracking-[0.12em] text-accent">{t("quickFilterLabel")}</p>
+                    <p className="text-xs font-black uppercase tracking-[0.12em] text-[var(--color-brand-accent-on-light)]">{t("quickFilterLabel")}</p>
                   </div>
                   <button
                     type="button"
@@ -610,7 +610,7 @@ export default function DetailedSearchPageClient() {
                       "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
                       isElectricOnly
                         ? "border-primary bg-primary text-white"
-                        : "border-accent/35 bg-white text-accent hover:border-accent hover:bg-accent/10",
+                        : "border-accent/35 bg-white text-[var(--color-brand-accent-on-light)] hover:border-accent hover:bg-accent/10",
                     )}
                   >
                     <Zap aria-hidden="true" className="size-4" />
@@ -669,6 +669,14 @@ export default function DetailedSearchPageClient() {
                 </fieldset>
               </div>
             </SectionCard>
+
+            <button
+              type="submit"
+              className="flex min-h-12 w-full items-center justify-center gap-3 rounded-xl bg-accent px-4 text-sm font-black text-accent-foreground shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 lg:hidden"
+            >
+              {t("submit")}
+              <ArrowRight aria-hidden="true" className="size-4" />
+            </button>
           </div>
 
           <aside className="order-first lg:order-last lg:sticky lg:top-24">
