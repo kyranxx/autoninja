@@ -163,7 +163,7 @@ function AuthModalFooter({
           <button
             type="button"
             onClick={() => onChangeView("register")}
-            className="text-[var(--color-brand-accent-on-light)] font-semibold hover:underline cursor-pointer"
+            className="cursor-pointer font-semibold text-primary underline decoration-accent decoration-2 underline-offset-2"
           >
             {t("footer.register")}
           </button>
@@ -174,7 +174,7 @@ function AuthModalFooter({
           <button
             type="button"
             onClick={() => onChangeView("login")}
-            className="text-[var(--color-brand-accent-on-light)] font-semibold hover:underline cursor-pointer"
+            className="cursor-pointer font-semibold text-primary underline decoration-accent decoration-2 underline-offset-2"
           >
             {t("footer.login")}
           </button>
@@ -183,7 +183,7 @@ function AuthModalFooter({
         <button
           type="button"
           onClick={() => onChangeView("login")}
-          className="text-sm text-[var(--color-brand-accent-on-light)] font-semibold hover:underline cursor-pointer"
+          className="cursor-pointer text-sm font-semibold text-primary underline decoration-accent decoration-2 underline-offset-2"
         >
           {t("footer.goToLogin")}
         </button>

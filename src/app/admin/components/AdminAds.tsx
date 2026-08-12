@@ -2,6 +2,7 @@
 
 import { useLocale } from "next-intl";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   useCallback,
   useEffect,
@@ -821,6 +822,7 @@ export function AdminAds() {
         description: createForm.description,
       });
       setNotice({ type: "success", text: copy.createSuccess });
+      toast.success(copy.createSuccess);
       setCreateOpen(false);
       setCreateForm((current) => ({
         ...EMPTY_CREATE_FORM,
@@ -830,7 +832,9 @@ export function AdminAds() {
       }));
       await refreshAds(false);
     } catch (error) {
-      setNotice({ type: "error", text: getErrorMessage(error, copy.actionFailed) });
+      const message = getErrorMessage(error, copy.actionFailed);
+      setNotice({ type: "error", text: message });
+      toast.error(message);
     } finally {
       setPendingAction(null);
     }
@@ -856,10 +860,13 @@ export function AdminAds() {
         status: nextStatus,
       });
       setNotice({ type: "success", text: copy.editSuccess });
+      toast.success(copy.editSuccess);
       setEditListing(null);
       await refreshAds(false);
     } catch (error) {
-      setNotice({ type: "error", text: getErrorMessage(error, copy.actionFailed) });
+      const message = getErrorMessage(error, copy.actionFailed);
+      setNotice({ type: "error", text: message });
+      toast.error(message);
     } finally {
       setPendingAction(null);
     }
@@ -875,10 +882,13 @@ export function AdminAds() {
         status: bulkStatus,
       });
       setNotice({ type: "success", text: copy.bulkSuccess });
+      toast.success(copy.bulkSuccess);
       setSelectedIds(new Set());
       await refreshAds(false);
     } catch (error) {
-      setNotice({ type: "error", text: getErrorMessage(error, copy.actionFailed) });
+      const message = getErrorMessage(error, copy.actionFailed);
+      setNotice({ type: "error", text: message });
+      toast.error(message);
     } finally {
       setPendingAction(null);
     }

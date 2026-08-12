@@ -179,7 +179,7 @@ export default function CookieBanner() {
             <div className="flex flex-col gap-2.5 sm:gap-3">
               <div>
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="rounded-md bg-accent/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-brand-accent-on-light">
+                  <span className="rounded-md bg-accent/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
                     Cookies
                   </span>
                   <h3 className="text-sm font-semibold text-primary">{t("title")}</h3>
@@ -188,7 +188,7 @@ export default function CookieBanner() {
                   {t("description")}{" "}
                   <Link
                     href="/ochrana-udajov"
-                    className="text-brand-accent-on-light underline decoration-1 underline-offset-2"
+                    className="text-primary underline decoration-accent decoration-2 underline-offset-2"
                   >
                     {tCommon("learnMore")}
                   </Link>

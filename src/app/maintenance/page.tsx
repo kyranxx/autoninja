@@ -85,7 +85,7 @@ function MaintenanceContent() {
       <div className="w-full max-w-md rounded-3xl border border-border bg-background-secondary p-6 shadow-sm">
         <div className="text-center">
           <div className="mx-auto inline-flex items-center gap-2 text-2xl font-bold text-primary">
-            Auto<span className="text-brand-accent-on-light">Ninja</span>
+            Auto<span className="text-accent">Ninja</span>
           </div>
           <h1 className="mt-5 text-3xl font-semibold text-primary">{t("title")}</h1>
           <p className="mt-2 text-sm text-text-secondary">

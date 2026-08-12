@@ -600,7 +600,7 @@ export default function DetailedSearchPageClient() {
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground shadow-sm">
                       <Zap aria-hidden="true" className="size-4" />
                     </span>
-                    <p className="text-xs font-black uppercase tracking-[0.12em] text-[var(--color-brand-accent-on-light)]">{t("quickFilterLabel")}</p>
+                    <p className="text-xs font-black uppercase tracking-[0.12em] text-primary">{t("quickFilterLabel")}</p>
                   </div>
                   <button
                     type="button"
@@ -610,7 +610,7 @@ export default function DetailedSearchPageClient() {
                       "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
                       isElectricOnly
                         ? "border-primary bg-primary text-white"
-                        : "border-accent/35 bg-white text-[var(--color-brand-accent-on-light)] hover:border-accent hover:bg-accent/10",
+                        : "border-accent/35 bg-white text-primary hover:border-accent hover:bg-accent/10",
                     )}
                   >
                     <Zap aria-hidden="true" className="size-4" />

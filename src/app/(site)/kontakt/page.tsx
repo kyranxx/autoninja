@@ -117,7 +117,7 @@ export default async function ContactPage() {
             >
               <a
                 href={`mailto:${market.contact.email}`}
-                className="font-medium text-[var(--color-brand-accent-on-light)] hover:text-[var(--color-primary)]"
+                className="font-medium text-primary underline decoration-accent decoration-2 underline-offset-2 hover:text-primary-hover"
               >
                 {market.contact.email}
               </a>
@@ -139,7 +139,7 @@ export default async function ContactPage() {
             >
               <a
                 href={`tel:${market.contact.phoneHref}`}
-                className="font-medium text-[var(--color-brand-accent-on-light)] hover:text-[var(--color-primary)]"
+                className="font-medium text-primary underline decoration-accent decoration-2 underline-offset-2 hover:text-primary-hover"
               >
                 {market.contact.phoneDisplay}
               </a>

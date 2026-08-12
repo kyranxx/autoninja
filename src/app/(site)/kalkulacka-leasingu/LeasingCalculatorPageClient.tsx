@@ -214,7 +214,7 @@ function RangeControl({
         className="mb-3 flex justify-between gap-4 text-sm font-medium text-primary"
       >
         <span>{label}</span>
-        <span className="text-right text-[var(--color-brand-accent-on-light)]">{value}</span>
+        <span className="text-right text-primary">{value}</span>
       </label>
       <input
         id={id}
