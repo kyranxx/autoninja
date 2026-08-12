@@ -7,6 +7,13 @@ import {
 
 const GA_MP_ENDPOINT = "https://www.google-analytics.com/mp/collect";
 
+function createGaClientId(): string {
+  const randomPart = crypto.getRandomValues(new Uint32Array(1))[0];
+  const timestampPart = Math.floor(Date.now() / 1000);
+
+  return `${randomPart}.${timestampPart}`;
+}
+
 async function forwardToMeasurementProtocol(
   name: string,
   payload: Record<string, unknown>,
@@ -19,7 +26,7 @@ async function forwardToMeasurementProtocol(
 
   try {
     const body = JSON.stringify({
-      client_id: crypto.randomUUID(),
+      client_id: createGaClientId(),
       ...(userId ? { user_id: userId } : {}),
       events: [
         {
