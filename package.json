@@ -13,6 +13,7 @@
     "test:db:rls": "node scripts/supabase-db-tests.mjs",
     "test:e2e": "npx playwright test tests/e2e.test.ts",
     "test:smoke": "npx tsx tests/smoke-test.ts",
+    "qa:seed:local": "tsx scripts/qa/seed-local-qa.ts",
     "check:prod-rate-limit-env": "node scripts/check-prod-rate-limit-env.mjs",
     "check:i18n-contract": "node scripts/i18n-catalog-contract.mjs"
   },
