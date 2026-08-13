@@ -294,6 +294,7 @@ export default async function HomePageShell() {
                 src="/homepage-dealer-showroom-v2.webp"
                 alt={sellerImageAlt}
                 fill
+                loading="eager"
                 sizes="(min-width: 768px) 45vw, 100vw"
                 className="object-cover"
               />

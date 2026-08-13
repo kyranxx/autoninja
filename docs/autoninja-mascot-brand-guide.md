@@ -70,6 +70,23 @@ substitute a darker orange solely to satisfy a contrast score. Orange UI text,
 logos, and accents must resolve to the shared brand tokens in
 `src/config/theme-brand.json`.
 
+## Logo lockup
+
+- The approved wordmark construction is Barlow Black (900), with the compact
+  existing tracking preserved as outlined paths in `wordmark.svg` and
+  `wordmark-inverse.svg`.
+- `Auto` uses Ninja black on light surfaces and white on dark surfaces.
+  `Ninja` always uses the exact Ninja orange `#F45B00`.
+- Production must render the outlined files through `BrandLogo`; do not rebuild
+  the wordmark with live text, a look-alike font, or browser-synthesized weight.
+- At navigation and footer sizes, pair the wordmark only with the approved head
+  icon. Full-body mascot poses belong in hero/editorial placements.
+- The domain suffix is market-specific UI text and is not part of the outlined
+  wordmark master.
+- Recreate the SVGs only with `scripts/generate-brand-wordmark.py`, then review
+  the result visually and update the locked SHA-256 values in
+  `mascot-manifest.json` deliberately.
+
 ## Production generation workflow
 
 1. Start from the approved final character sheet, never from text alone.

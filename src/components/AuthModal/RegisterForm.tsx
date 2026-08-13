@@ -234,7 +234,7 @@ function RegisterForm({
           {t("register.termsStart")}{" "}
           <Link
             href="/obchodne-podmienky"
-            className="text-accent hover:underline"
+            className="text-primary underline decoration-accent decoration-2 underline-offset-2"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -243,7 +243,7 @@ function RegisterForm({
           {` ${t("register.and")} `}
           <Link
             href="/ochrana-udajov"
-            className="text-accent hover:underline"
+            className="text-primary underline decoration-accent decoration-2 underline-offset-2"
             target="_blank"
             rel="noopener noreferrer"
           >

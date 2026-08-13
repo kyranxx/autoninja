@@ -873,17 +873,18 @@ function HomeBrandLogo({ brand, slug }: { brand: string; slug: string }) {
   }
 
   return (
-    <span className="flex h-10 w-full items-center justify-center sm:h-10">
+    <span
+      className={cn(
+        "relative flex w-full items-center justify-center",
+        HOME_BRAND_LOGO_CLASSNAMES[slug] ?? "h-[22px] sm:h-7",
+      )}
+    >
       <Image
         src={src}
         alt={`${brand} logo`}
-        width={64}
-        height={32}
+        fill
         sizes="64px"
-        className={cn(
-          "w-auto max-w-full object-contain object-center",
-          HOME_BRAND_LOGO_CLASSNAMES[slug] ?? "h-[22px] sm:h-7",
-        )}
+        className="object-contain object-center"
       />
     </span>
   );
@@ -2508,7 +2509,7 @@ function useHomeSearchFormClientView({ className }: HomeSearchFormClientProps) {
         aria-label={submitButtonLabel}
         aria-busy={isSearching || isPreviewLoading}
         className={cn(
-          "market-action-primary mt-3 flex h-14 min-h-14 w-full px-5 py-3 text-white",
+          "market-action-primary mt-3 flex h-14 min-h-14 w-full px-5 py-3",
           isSearching && "cursor-not-allowed opacity-80",
         )}
       >

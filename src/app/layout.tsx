@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { getLocale, getMessages, getTimeZone, getTranslations } from "next-intl/server";
@@ -96,14 +95,12 @@ export default function RootLayout({
   } as CSSProperties;
 
   return (
-    <Suspense>
-      <RootDocument
-        dnsPrefetchOrigins={dnsPrefetchOrigins}
-        appThemeVars={appThemeVars}
-      >
-        {children}
-      </RootDocument>
-    </Suspense>
+    <RootDocument
+      dnsPrefetchOrigins={dnsPrefetchOrigins}
+      appThemeVars={appThemeVars}
+    >
+      {children}
+    </RootDocument>
   );
 }
 

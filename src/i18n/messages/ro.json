@@ -1072,6 +1072,15 @@
     "description": "Pagina nu există sau a fost mutată.",
     "backHome": "Înapoi acasă"
   },
+  "errorPage": {
+    "eyebrow": "Eroare",
+    "title": "Ceva nu a funcționat",
+    "description": "{brand} nu a putut finaliza această acțiune. Încearcă să încarci pagina din nou sau revino la o pagină sigură.",
+    "errorId": "ID eroare",
+    "retry": "Încearcă din nou",
+    "home": "Mergi la pagina principală",
+    "contact": "Contactează asistența"
+  },
   "maintenance": {
     "title": "Mod mentenanță",
     "description": "Site-ul este temporar în întreținere.",

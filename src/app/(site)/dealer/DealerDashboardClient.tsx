@@ -1227,6 +1227,7 @@ function BulkActionsTab({
         type: "error",
         message: inlineCopy.chooseActiveAds,
       });
+      toast.error(inlineCopy.chooseActiveAds);
       return;
     }
 
@@ -1267,10 +1268,9 @@ function BulkActionsTab({
         | null;
 
       if (!response.ok || !result?.ok) {
-        setFeedback({
-          type: "error",
-          message: result?.error || inlineCopy.actionFailed,
-        });
+        const message = result?.error || inlineCopy.actionFailed;
+        setFeedback({ type: "error", message });
+        toast.error(message);
         return;
       }
 
@@ -1309,17 +1309,15 @@ function BulkActionsTab({
         }
       }
 
-      setFeedback({
-        type: "success",
-        message: inlineCopy.actionApplied
-          .replace("{action}", actionLabel)
-          .replace("{count}", String(result.appliedCount || selectedAdIds.length)),
-      });
+      const successMessage = inlineCopy.actionApplied
+        .replace("{action}", actionLabel)
+        .replace("{count}", String(result.appliedCount || selectedAdIds.length));
+      setFeedback({ type: "success", message: successMessage });
+      toast.success(successMessage);
     } catch (error) {
-      setFeedback({
-        type: "error",
-        message: error instanceof Error ? error.message : inlineCopy.actionFailed,
-      });
+      const message = error instanceof Error ? error.message : inlineCopy.actionFailed;
+      setFeedback({ type: "error", message });
+      toast.error(message);
     } finally {
       setProcessingActionId(null);
     }

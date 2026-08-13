@@ -19,45 +19,74 @@ export function BrandLogo({
   responsiveInverse = false,
   showDomain = false,
 }: BrandLogoProps) {
+  const domainClassName = responsiveInverse
+    ? "text-white md:text-text-primary"
+    : inverse
+      ? "text-white"
+      : "text-text-primary";
+
   return (
-    <span className={cn("inline-flex items-center", className)}>
-      <span className="font-sans font-black tracking-[-0.055em]">
-        <span
-          className={cn(
-            responsiveInverse
-              ? "text-white md:text-text-primary"
-              : inverse
-                ? "text-white"
-                : "text-text-primary",
-          )}
-        >
-          Auto
-        </span>
-        <span
-          className={cn(
-            responsiveInverse
-              ? "text-brand-accent-on-dark md:text-brand-accent-on-light"
-              : inverse
-                ? "text-brand-accent-on-dark"
-                : "text-brand-accent-on-light",
-          )}
-        >
-          Ninja
-        </span>
+    <span className={cn("inline-flex items-center", className)} data-brand-logo>
+      <span className="sr-only">
+        AutoNinja{showDomain ? (marketCode === "SK" ? ".sk" : ".ro") : ""}
+      </span>
+      <span className="inline-flex items-baseline font-sans font-extrabold">
+        {responsiveInverse ? (
+          <>
+            <Image
+              data-brand-wordmark="inverse"
+              src="/brand/autoninja/wordmark-inverse.svg"
+              alt=""
+              aria-hidden="true"
+              width={3982}
+              height={944}
+              unoptimized
+              className="h-[0.94em] w-auto md:hidden"
+            />
+            <Image
+              data-brand-wordmark="default"
+              src="/brand/autoninja/wordmark.svg"
+              alt=""
+              aria-hidden="true"
+              width={3982}
+              height={944}
+              unoptimized
+              className="hidden h-[0.94em] w-auto md:block"
+            />
+          </>
+        ) : (
+          <Image
+            data-brand-wordmark={inverse ? "inverse" : "default"}
+            src={
+              inverse
+                ? "/brand/autoninja/wordmark-inverse.svg"
+                : "/brand/autoninja/wordmark.svg"
+            }
+            alt=""
+            aria-hidden="true"
+            width={3982}
+            height={944}
+            unoptimized
+            className="h-[0.94em] w-auto"
+          />
+        )}
         {showDomain ? (
-          <span className={cn("tracking-normal", inverse ? "text-white" : "text-text-primary")}>
+          <span
+            aria-hidden="true"
+            className={cn("ml-[0.02em] tracking-normal", domainClassName)}
+          >
             {marketCode === "SK" ? ".sk" : ".ro"}
           </span>
         ) : null}
       </span>
       <Image
-        src="/brand/autoninja/mascot-kimono-black-final-optimized.webp"
+        src="/brand/autoninja/mascot-head.webp"
         alt=""
-        width={108}
-        height={195}
-        sizes="72px"
+        width={1536}
+        height={1536}
+        sizes="48px"
         className={cn(
-          "-ml-[0.36em] h-[2.15em] w-[1.45em] shrink-0 translate-y-[0.16em] object-contain object-left",
+          "-ml-[0.12em] h-[1.6em] w-[1.6em] shrink-0 object-contain",
           imageClassName,
         )}
       />

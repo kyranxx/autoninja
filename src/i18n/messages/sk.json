@@ -1072,6 +1072,15 @@
     "description": "Stránka neexistuje alebo bola presunutá.",
     "backHome": "Späť na domov"
   },
+  "errorPage": {
+    "eyebrow": "Chyba",
+    "title": "Niečo sa pokazilo",
+    "description": "{brand} nemohol dokončiť túto akciu. Skúste stránku načítať znova alebo sa vráťte na bezpečné miesto.",
+    "errorId": "ID chyby",
+    "retry": "Skúsiť znova",
+    "home": "Prejsť na domovskú stránku",
+    "contact": "Kontaktovať podporu"
+  },
   "maintenance": {
     "title": "Režim údržby",
     "description": "Stránka je dočasne v údržbe.",

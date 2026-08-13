@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "identityMaster": {
+    "path": "/brand/autoninja/mascot-leaning-key-hero-v2.png",
+    "sha256": "397c5fa8922a75912025e20b1bca75998ab831aaab8df07fb12599b40234d82a"
+  },
+  "approvedReferences": [
+    {
+      "role": "small-size head icon and face reference",
+      "path": "/brand/autoninja/mascot-head.png",
+      "sha256": "a3f64f303a150786e439cbba103eec1a18647b38c229bf7da5e27f5c0ac55062"
+    },
+    {
+      "role": "approved full-body automotive pose",
+      "path": "/brand/autoninja/mascot-steering-wheel-hero-v1.png",
+      "sha256": "b4c8e84e385120ec7f84b88b9cd97304e22b98b8d50077a7d745be62e1ab70a6"
+    }
+  ],
+  "productionAssets": [
+    {
+      "role": "optimized small-size head icon",
+      "path": "/brand/autoninja/mascot-head.webp",
+      "sha256": "9cff86b84b0822e0056a3ffa2ddc469230a65ce07ad6fa93813be52be4b63bf6"
+    },
+    {
+      "role": "outlined Barlow Black wordmark for light surfaces",
+      "path": "/brand/autoninja/wordmark.svg",
+      "sha256": "29e33f443c849c6f6ab87a43100e2df676bc7c0c500311c44eefada6a8238b68"
+    },
+    {
+      "role": "outlined Barlow Black wordmark for dark surfaces",
+      "path": "/brand/autoninja/wordmark-inverse.svg",
+      "sha256": "e55eff39a3aaa0f82c5d38c635568f5cc577f249b03d308212ac4fe10235305f"
+    }
+  ],
+  "brandPalette": {
+    "orange": "#F45B00",
+    "orangeHover": "#E85A00",
+    "black": "#111317",
+    "green": "#005C33",
+    "greenHover": "#004726",
+    "white": "#FFFFFF",
+    "mint": "#49E698"
+  },
+  "generationPolicy": {
+    "referenceImagesRequired": true,
+    "textOnlyGenerationAllowed": false,
+    "approvalRequiredBeforeProduction": true,
+    "guide": "/docs/autoninja-mascot-brand-guide.md"
+  }
+}

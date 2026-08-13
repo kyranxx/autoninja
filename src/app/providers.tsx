@@ -49,26 +49,26 @@ export default function AppProviders({
       <MarketProvider marketCode={marketCode}>
         <IconWeightProvider>
           <AuthProvider>
-          {children}
-          {showDevIconControls ? <IconWeightSwitcher /> : null}
-          <WebVitalsReporter />
-          <GoogleOneTap
-            clientId={googleOneTapClientId}
-            enabled={googleOneTapEnabled}
-            marketCode={marketCode}
-          />
-          <CookieBanner />
-          <Toaster
-          position="bottom-right"
-          richColors
-          closeButton
-          expand
-          visibleToasts={5}
-          toastOptions={{
-            duration: 4000,
-            className: "font-sans sonner-toast-card",
-          }}
-        />
+            {children}
+            {showDevIconControls ? <IconWeightSwitcher /> : null}
+            <WebVitalsReporter />
+            <GoogleOneTap
+              clientId={googleOneTapClientId}
+              enabled={googleOneTapEnabled}
+              marketCode={marketCode}
+            />
+            <CookieBanner />
+            <Toaster
+              position="top-right"
+              closeButton
+              expand={false}
+              visibleToasts={3}
+              gap={10}
+              toastOptions={{
+                duration: 5000,
+                className: "font-sans sonner-toast-card",
+              }}
+            />
           </AuthProvider>
         </IconWeightProvider>
       </MarketProvider>

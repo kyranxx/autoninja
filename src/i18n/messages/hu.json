@@ -1072,6 +1072,15 @@
     "description": "Az oldal nem létezik vagy áthelyezték.",
     "backHome": "Vissza a főoldalra"
   },
+  "errorPage": {
+    "eyebrow": "Hiba",
+    "title": "Valami hiba történt",
+    "description": "A(z) {brand} nem tudta befejezni ezt a műveletet. Próbáld újra betölteni az oldalt, vagy térj vissza egy biztonságos oldalra.",
+    "errorId": "Hibaazonosító",
+    "retry": "Újrapróbálás",
+    "home": "Ugrás a főoldalra",
+    "contact": "Kapcsolatfelvétel az ügyfélszolgálattal"
+  },
   "maintenance": {
     "title": "Karbantartási mód",
     "description": "Az oldal ideiglenesen karbantartás alatt áll.",

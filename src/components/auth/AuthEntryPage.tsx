@@ -65,10 +65,15 @@ export function AuthEntryPage({
   return (
     <main
       id="main-content"
-      className="min-h-screen bg-background flex items-center justify-center"
+      className="flex min-h-[calc(100svh-8rem)] items-center justify-center bg-background-muted px-4 py-8 sm:py-12"
     >
       <h1 className="sr-only">{t(srTitleKey)}</h1>
-      <AuthModal isOpen={showModal} onClose={handleClose} initialView={initialView} />
+      <AuthModal
+        isOpen={showModal}
+        onClose={handleClose}
+        initialView={initialView}
+        presentation="page"
+      />
     </main>
   );
 }
