@@ -76,15 +76,17 @@ function FeaturedAdCard({
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col p-3.5">
-        <h3 className="line-clamp-1 text-[13px] font-black leading-tight text-text-primary">
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="line-clamp-2 text-[15px] font-black leading-snug tracking-[-0.01em] text-text-primary sm:text-base">
           {card.title}
         </h3>
-        <p className="mt-2 line-clamp-1 text-[11px] font-medium text-text-secondary">
+        <p className="mt-1.5 line-clamp-1 text-xs font-semibold text-text-secondary">
           {card.year} · {card.mileage} · {card.fuel}
         </p>
-        <p className="mt-2.5 text-base font-black text-[var(--home-brand)]">{card.price}</p>
-        <p className="mt-auto flex items-center gap-1.5 pt-3 text-[11px] font-medium text-text-secondary">
+        <p className="mt-3 text-xl font-black leading-none tracking-[-0.025em] text-[var(--home-brand)] tabular-nums">
+          {card.price}
+        </p>
+        <p className="mt-auto flex items-center gap-1.5 border-t border-black/8 pt-3 text-xs font-semibold text-text-secondary">
           <LocationIcon className="size-3.5" />
           {card.location}
         </p>

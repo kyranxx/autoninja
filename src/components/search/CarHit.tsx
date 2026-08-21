@@ -264,10 +264,9 @@ export function CarHit({
           className="block size-full focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
         >
           <div
-            className="flex h-full min-h-full w-full"
+            className="flex h-full min-h-full w-full transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none"
             style={{
               transform: `translate3d(-${activePhotoIndex * 100}%, 0px, 0px)`,
-              transition: "transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)",
             }}
           >
             {galleryPhotos.map((photoUrl, index) => {
@@ -380,7 +379,7 @@ function CarHitGalleryControls({
 }) {
   return (
     <>
-      <div className="absolute inset-x-0 bottom-3 z-10 flex items-center justify-between px-2">
+      <div className="absolute inset-x-0 bottom-2 z-10 flex items-center justify-between px-1.5">
         <button
           type="button"
           onPointerDown={onStopCardNavigation}
@@ -388,11 +387,11 @@ function CarHitGalleryControls({
             onStopCardNavigation(event);
             onCyclePhoto(-1);
           }}
-          className="flex size-8 items-center justify-center rounded-full"
+          className="flex size-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white"
           aria-label={previousPhotoLabel}
         >
-          <span className="flex size-7 items-center justify-center rounded-full bg-mint/92 text-primary shadow-md transition-colors hover:bg-mint/92">
-            <ChevronLeft className="size-3" />
+          <span className="flex size-8 items-center justify-center rounded-full bg-mint/92 text-primary shadow-md transition-colors hover:bg-mint">
+            <ChevronLeft className="size-4" />
           </span>
         </button>
         <button
@@ -402,15 +401,15 @@ function CarHitGalleryControls({
             onStopCardNavigation(event);
             onCyclePhoto(1);
           }}
-          className="flex size-8 items-center justify-center rounded-full"
+          className="flex size-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white"
           aria-label={nextPhotoLabel}
         >
-          <span className="flex size-7 items-center justify-center rounded-full bg-mint/92 text-primary shadow-md transition-colors hover:bg-mint/92">
-            <ChevronRight className="size-3" />
+          <span className="flex size-8 items-center justify-center rounded-full bg-mint/92 text-primary shadow-md transition-colors hover:bg-mint">
+            <ChevronRight className="size-4" />
           </span>
         </button>
       </div>
-      <div className="absolute bottom-1.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 backdrop-blur-sm">
+      <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full bg-black/45 px-1 backdrop-blur-sm">
         {photos.map((photo, index) => (
           <button
             key={`photo-dot-${index}-${photo}`}
@@ -420,12 +419,17 @@ function CarHitGalleryControls({
               onStopCardNavigation(event);
               onSelectPhoto(index);
             }}
-            className={cn(
-              "size-1 rounded-full transition-all",
-              activePhotoIndex === index ? "w-2.5 bg-white" : "bg-white/55",
-            )}
+            className="flex size-6 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-white"
             aria-label={getShowPhotoLabel(index + 1)}
-          />
+            aria-current={activePhotoIndex === index ? "true" : undefined}
+          >
+            <span
+              className={cn(
+                "block size-1.5 rounded-full bg-white/55 transition-[width,background-color] motion-reduce:transition-none",
+                activePhotoIndex === index && "w-3 bg-white",
+              )}
+            />
+          </button>
         ))}
       </div>
     </>
@@ -459,12 +463,13 @@ function CarHitDetails({
       )}
     >
       <div className="min-w-0">
-        <p className="text-xl font-black leading-none tracking-[-0.035em] text-text-primary tabular-nums sm:text-2xl">
-          {formatPrice(hit.price_eur || 0, localeTag)} &euro;
-        </p>
-        <h3 className="mt-1.5 line-clamp-2 text-[15px] font-bold leading-snug tracking-[-0.01em] text-text-primary sm:text-lg">
+        <h3 className="line-clamp-2 text-base font-black leading-snug tracking-[-0.015em] text-text-primary sm:text-lg">
           {hit.brand} {hit.model}
         </h3>
+
+        <p className="mt-1.5 text-xl font-black leading-none tracking-[-0.035em] text-accent tabular-nums sm:text-2xl">
+          {formatPrice(hit.price_eur || 0, localeTag)} &euro;
+        </p>
 
         <div className="mt-2.5 space-y-2">
           <SpecLine items={primarySpecs} />
