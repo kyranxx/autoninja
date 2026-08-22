@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
       return new NextResponse(null, { status: 204 });
     }
 
-    const metadata: Record<string, unknown> = {
+    const { error } = await supabase.from("web_vitals").insert({
       market_code: resolveMarketCodeFromHost(
         request.headers.get("x-forwarded-host") ??
           request.headers.get("host") ??
@@ -135,14 +135,6 @@ export async function POST(request: NextRequest) {
       metric_id: parsed.data.id || null,
       metric_delta: normalizeMetricValue(parsed.data.delta),
       navigation_type: parsed.data.navigationType || null,
-      user_agent: request.headers.get("user-agent")?.slice(0, 300) || null,
-    };
-
-    const { error } = await supabase.from("system_logs").insert({
-      level: "info",
-      category: "system",
-      message: "web_vital",
-      metadata,
       created_at: new Date().toISOString(),
     });
 

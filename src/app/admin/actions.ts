@@ -363,12 +363,6 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function getEventNameFromSystemLogMetadata(metadata: unknown): string | null {
-  const record = asRecord(metadata);
-  const eventName = record?.eventName;
-  return typeof eventName === "string" ? eventName : null;
-}
-
 function calculateMedian(values: number[]): number | null {
   if (values.length === 0) return null;
   const sorted = values.toSorted((a, b) => a - b);
@@ -943,7 +937,7 @@ export async function getFounderDashboardSummary(days = 30): Promise<FounderDash
     { data: monthlySoldAds, error: soldError },
     { data: sellerAds, error: sellerAdsError },
     { data: topUpHistoryRows, error: topUpHistoryError },
-    { data: analyticsEventLogs, error: analyticsLogsError },
+    { data: analyticsEvents, error: analyticsEventsError },
     processedCheckoutLogs,
   ] = await Promise.all([
     supabase
@@ -970,9 +964,8 @@ export async function getFounderDashboardSummary(days = 30): Promise<FounderDash
       .in("transaction_kind", ["dealer_topup", "private_listing_purchase"])
       .gt("amount_cents", 0),
     supabase
-      .from("system_logs")
-      .select("metadata, created_at")
-      .eq("message", "analytics_event")
+      .from("analytics_events")
+      .select("event_name, created_at")
       .gte("created_at", previousStartIso),
     processedCheckoutLogsPromise,
   ]);
@@ -982,7 +975,7 @@ export async function getFounderDashboardSummary(days = 30): Promise<FounderDash
   if (soldError) throw new Error(soldError.message);
   if (sellerAdsError) throw new Error(sellerAdsError.message);
   if (topUpHistoryError) throw new Error(topUpHistoryError.message);
-  if (analyticsLogsError) throw new Error(analyticsLogsError.message);
+  if (analyticsEventsError) throw new Error(analyticsEventsError.message);
 
   const paidFeatureActionTypes = new Set([
     "publish_premium",
@@ -1008,8 +1001,8 @@ export async function getFounderDashboardSummary(days = 30): Promise<FounderDash
         row.transaction_kind === "dealer_topup" ||
         row.transaction_kind === "private_listing_purchase",
     );
-  const analyticsLogs =
-    (analyticsEventLogs as { metadata?: unknown; created_at?: string | null }[] | null) || [];
+  const analyticsEventRows =
+    (analyticsEvents as { event_name?: string | null; created_at?: string | null }[] | null) || [];
 
   const isCurrentWindow = (iso: string | null | undefined) =>
     Boolean(iso && iso >= currentStartIso);
@@ -1062,15 +1055,11 @@ export async function getFounderDashboardSummary(days = 30): Promise<FounderDash
     previousRevenueFromAdsAndFeatures.toFixed(2),
   );
 
-  const listingViews = analyticsLogs.filter(
-    (row) =>
-      getEventNameFromSystemLogMetadata(row.metadata) === "listing_viewed" &&
-      isCurrentWindow(row.created_at),
+  const listingViews = analyticsEventRows.filter(
+    (row) => row.event_name === "listing_viewed" && isCurrentWindow(row.created_at),
   ).length;
-  const previousListingViews = analyticsLogs.filter(
-    (row) =>
-      getEventNameFromSystemLogMetadata(row.metadata) === "listing_viewed" &&
-      isPreviousWindow(row.created_at),
+  const previousListingViews = analyticsEventRows.filter(
+    (row) => row.event_name === "listing_viewed" && isPreviousWindow(row.created_at),
   ).length;
 
   const soldListings = soldRows.filter((row) => isCurrentWindow(row.sold_at)).length;
@@ -1252,9 +1241,9 @@ export async function getFounderDashboardSummary(days = 30): Promise<FounderDash
     );
   }
 
-  for (const row of analyticsLogs) {
+  for (const row of analyticsEventRows) {
     if (!isCurrentWindow(row.created_at)) continue;
-    if (getEventNameFromSystemLogMetadata(row.metadata) !== "listing_viewed") continue;
+    if (row.event_name !== "listing_viewed") continue;
     const dateKey = parseUtcDateKey(row.created_at);
     if (!dateKey) continue;
     const current = dailySeriesMap.get(dateKey);

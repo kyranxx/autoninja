@@ -55,6 +55,9 @@ async function forwardEventToPosthog(input: {
         userId: input.context?.userId ?? null,
         marketCode: input.context?.marketCode ?? null,
         source: "autoninja_first_party_ingest",
+        // Events are forwarded by Vercel, whose edge IP is not the visitor's.
+        // Market is derived from the verified request host instead.
+        $geoip_disable: true,
       },
       timestamp: new Date().toISOString(),
     }),
@@ -124,20 +127,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ accepted: false, degraded: true }, { status: 202 });
   }
 
-  const { error } = await admin.from("system_logs").insert({
-    level: "info",
-    category: "system",
-    message: "analytics_event",
-    metadata: {
-      eventName: parsedBody.name,
-      payload: payloadValidation.data,
-      pagePath: parsedBody.context?.pagePath ?? null,
-      pageUrl: parsedBody.context?.pageUrl ?? null,
-      pageTitle: parsedBody.context?.pageTitle ?? null,
-      referrer: parsedBody.context?.referrer ?? null,
-      userId: parsedBody.context?.userId ?? null,
-      marketCode,
-    },
+  const { error } = await admin.from("analytics_events").insert({
+    event_name: parsedBody.name,
+    payload: payloadValidation.data,
+    page_path: parsedBody.context?.pagePath ?? null,
+    page_url: parsedBody.context?.pageUrl ?? null,
+    page_title: parsedBody.context?.pageTitle ?? null,
+    referrer: parsedBody.context?.referrer ?? null,
+    market_code: marketCode,
+    distinct_id: parsedBody.context?.distinctId ?? null,
     created_at: new Date().toISOString(),
   });
 

@@ -78,4 +78,32 @@ describe("POST /api/monitoring/web-vitals", () => {
     expect(response.status).toBe(204);
     expect(createAdminClientMock).not.toHaveBeenCalled();
   });
+
+  it("stores accepted metrics in the dedicated web-vitals table", async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const from = vi.fn(() => ({ insert }));
+    createAdminClientMock.mockReturnValue({ from });
+
+    const response = await POST(
+      new NextRequest("https://autoninja.sk/api/monitoring/web-vitals", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://autoninja.sk",
+        },
+        body: JSON.stringify(validPayload),
+      }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(from).toHaveBeenCalledWith("web_vitals");
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        market_code: "SK",
+        metric_name: "LCP",
+        metric_value: 1250,
+        route: "/",
+      }),
+    );
+  });
 });

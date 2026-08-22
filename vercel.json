@@ -29,6 +29,10 @@
         {
             "path": "/api/cron/process-email-jobs",
             "schedule": "30 7 * * *"
+        },
+        {
+            "path": "/api/cron/cleanup-telemetry",
+            "schedule": "35 6 * * *"
         }
     ]
 }

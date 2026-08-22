@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(37);
+select plan(40);
 
 select is(
   (
@@ -136,7 +136,7 @@ select ok(
       and policyname = 'Participants can send inquiry messages'
       and cmd = 'INSERT'
       and roles @> array['authenticated'::name]
-      and with_check ilike '%can_send_inquiry_message%'
+      and with_check ilike '%private.can_send_inquiry_message%'
       and with_check ilike '%sender_id%'
       and with_check ilike '%conversation_id%'
       and with_check ilike '%recipient_id%'
@@ -145,19 +145,25 @@ select ok(
 );
 
 select is(
+  to_regprocedure('public.can_send_inquiry_message(uuid,uuid,uuid,uuid)'),
+  null,
+  'the inquiry membership predicate has no public Data API function'
+);
+
+select is(
   has_function_privilege(
     'anon',
-    'public.can_send_inquiry_message(uuid,uuid,uuid,uuid)',
+    'private.can_send_inquiry_message(uuid,uuid,uuid,uuid)',
     'EXECUTE'
   ),
   false,
-  'anonymous users cannot invoke the inquiry membership predicate'
+  'anonymous users cannot invoke the private inquiry membership predicate'
 );
 
 select is(
   has_function_privilege(
     'authenticated',
-    'public.can_send_inquiry_message(uuid,uuid,uuid,uuid)',
+    'private.can_send_inquiry_message(uuid,uuid,uuid,uuid)',
     'EXECUTE'
   ),
   true,
@@ -168,7 +174,7 @@ select is(
   (
     select provolatile::text
     from pg_proc
-    where oid = 'public.can_send_inquiry_message(uuid,uuid,uuid,uuid)'::regprocedure
+    where oid = 'private.can_send_inquiry_message(uuid,uuid,uuid,uuid)'::regprocedure
   ),
   'v',
   'inquiry membership checks can see the conversation created by the same statement trigger'
@@ -250,6 +256,26 @@ select is(
   has_function_privilege('authenticated', 'public.get_inquiry_participant_profiles()', 'EXECUTE'),
   true,
   'authenticated participants can resolve safe counterpart display names'
+);
+
+select is(
+  (
+    select prosecdef
+    from pg_proc
+    where oid = 'public.get_inquiry_participant_profiles()'::regprocedure
+  ),
+  false,
+  'the public participant-profile RPC is an invoker wrapper'
+);
+
+select is(
+  (
+    select prosecdef
+    from pg_proc
+    where oid = 'private.get_inquiry_participant_profiles()'::regprocedure
+  ),
+  true,
+  'the participant-profile lookup remains a private security-definer helper'
 );
 
 select ok(
